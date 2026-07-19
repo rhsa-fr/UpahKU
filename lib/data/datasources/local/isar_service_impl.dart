@@ -11,10 +11,11 @@ import '../../models/penggajian_model.dart';
 
 class IsarServiceImpl implements IsarService {
   Isar? _isar;
+  Future<void>? _initFuture;
 
   @override
   Future<Isar> get db async {
-    if (_isar == null) {
+    if (_isar == null || !_isar!.isOpen) {
       await init();
     }
     return _isar!;
@@ -22,6 +23,20 @@ class IsarServiceImpl implements IsarService {
 
   @override
   Future<void> init() async {
+    if (_initFuture != null) {
+      await _initFuture;
+      return;
+    }
+
+    _initFuture = _doInit();
+    try {
+      await _initFuture;
+    } finally {
+      _initFuture = null;
+    }
+  }
+
+  Future<void> _doInit() async {
     if (_isar != null && _isar!.isOpen) return;
 
     // Check if the default Isar instance is already open globally (common during hot restarts)
@@ -37,17 +52,27 @@ class IsarServiceImpl implements IsarService {
       path = dir.path;
     }
 
-    _isar = await Isar.open(
-      [
-        KaryawanModelSchema,
-        AbsensiModelSchema,
-        LemburModelSchema,
-        TransaksiTambahanModelSchema,
-        PenggajianModelSchema,
-      ],
-      directory: path,
-      inspector: !kIsWeb,
-    );
+    try {
+      _isar = await Isar.open(
+        [
+          KaryawanModelSchema,
+          AbsensiModelSchema,
+          LemburModelSchema,
+          TransaksiTambahanModelSchema,
+          PenggajianModelSchema,
+        ],
+        directory: path,
+        inspector: !kIsWeb,
+      );
+    } catch (e) {
+      // If Isar.open failed (e.g. because it was opened concurrently), check if it's open now
+      final fallbackInstance = Isar.getInstance();
+      if (fallbackInstance != null && fallbackInstance.isOpen) {
+        _isar = fallbackInstance;
+      } else {
+        rethrow;
+      }
+    }
   }
 
   @override
