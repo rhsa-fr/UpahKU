@@ -57,21 +57,51 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
         ],
       ),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: _onPageChanged,
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  _buildSlide1(context, isDark),
-                  _buildSlide2(context, isDark),
-                  _buildSlide3(context, isDark),
-                ],
+            // Premium background blobs
+            Positioned(
+              top: -80,
+              right: -80,
+              child: Container(
+                width: 250,
+                height: 250,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.emerald.withOpacity(isDark ? 0.08 : 0.06),
+                ),
               ),
             ),
-            _buildBottomControls(context, isDark),
+            Positioned(
+              bottom: 80,
+              left: -100,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.navy.withOpacity(isDark ? 0.15 : 0.05),
+                ),
+              ),
+            ),
+            // Content
+            Column(
+              children: [
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: _onPageChanged,
+                    physics: const BouncingScrollPhysics(),
+                    children: [
+                      _buildSlide1(context, isDark),
+                      _buildSlide2(context, isDark),
+                      _buildSlide3(context, isDark),
+                    ],
+                  ),
+                ),
+                _buildBottomControls(context, isDark),
+              ],
+            ),
           ],
         ),
       ),

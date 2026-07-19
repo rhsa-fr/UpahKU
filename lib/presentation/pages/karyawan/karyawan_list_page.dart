@@ -21,7 +21,9 @@ class _KaryawanListPageState extends ConsumerState<KaryawanListPage> {
     final karyawanState = ref.watch(karyawanProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
         title: const Text('Kelola Karyawan'),
         actions: [
           IconButton(

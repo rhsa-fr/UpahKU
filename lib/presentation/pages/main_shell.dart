@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../widgets/background_wrapper.dart';
 import 'dashboard/dashboard_page.dart';
 import 'karyawan/karyawan_list_page.dart';
 import 'absensi/absensi_page.dart';
@@ -21,14 +22,16 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: const [
-          DashboardPage(),
-          KaryawanListPage(),
-          _InputHarianTabs(),
-          RiwayatPage(),
-        ],
+      body: BackgroundWrapper(
+        child: IndexedStack(
+          index: _currentIndex,
+          children: const [
+            DashboardPage(),
+            KaryawanListPage(),
+            _InputHarianTabs(),
+            RiwayatPage(),
+          ],
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
@@ -72,7 +75,9 @@ class _InputHarianTabs extends StatelessWidget {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
+          backgroundColor: Colors.transparent,
           title: const Text('Pencatatan Harian'),
           bottom: const TabBar(
             tabs: [

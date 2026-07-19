@@ -24,6 +24,13 @@ class IsarServiceImpl implements IsarService {
   Future<void> init() async {
     if (_isar != null && _isar!.isOpen) return;
 
+    // Check if the default Isar instance is already open globally (common during hot restarts)
+    final existingInstance = Isar.getInstance();
+    if (existingInstance != null && existingInstance.isOpen) {
+      _isar = existingInstance;
+      return;
+    }
+
     String path = '';
     if (!kIsWeb) {
       final dir = await getApplicationDocumentsDirectory();

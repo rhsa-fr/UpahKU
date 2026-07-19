@@ -13,7 +13,9 @@ class DashboardPage extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

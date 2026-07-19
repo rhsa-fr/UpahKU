@@ -15,7 +15,9 @@ class RiwayatPage extends ConsumerWidget {
     final historyState = ref.watch(penggajianHistoryProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
         title: const Text('Riwayat & Arsip'),
         actions: [
           IconButton(

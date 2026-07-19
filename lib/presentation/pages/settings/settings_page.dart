@@ -11,6 +11,8 @@ import '../../providers/settings_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/theme_provider.dart';
 
+import '../../widgets/background_wrapper.dart';
+
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
@@ -45,11 +47,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       _alamatUsahaController.text = next.alamatUsaha;
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pengaturan'),
-      ),
-      body: SingleChildScrollView(
+    return BackgroundWrapper(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          title: const Text('Pengaturan'),
+        ),
+        body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,8 +203,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _saveProfile() {
     if (!_formKey.currentState!.validate()) return;
