@@ -27,10 +27,7 @@ class AppTheme {
         ),
         iconTheme: IconThemeData(color: AppColors.textPrimaryLight),
       ),
-      textTheme: GoogleFonts.outfitTextTheme().apply(
-        bodyColor: AppColors.textPrimaryLight,
-        displayColor: AppColors.textPrimaryLight,
-      ),
+      fontFamily: 'Outfit',
       cardTheme: CardThemeData(
         color: AppColors.surfaceLight,
         elevation: 0,
@@ -109,10 +106,7 @@ class AppTheme {
         ),
         iconTheme: IconThemeData(color: AppColors.textPrimaryDark),
       ),
-      textTheme: GoogleFonts.outfitTextTheme().apply(
-        bodyColor: AppColors.textPrimaryDark,
-        displayColor: AppColors.textPrimaryDark,
-      ),
+      fontFamily: 'Outfit',
       cardTheme: CardThemeData(
         color: AppColors.surfaceDark,
         elevation: 0,
