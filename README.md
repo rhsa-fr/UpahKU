@@ -9,21 +9,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/rhsa-fr/UpahKU/releases/tag/v1.0.0">
-    <img src="https://img.shields.io/badge/UNDUH_APK-RELEASE_v1.0.0-10B981?style=for-the-badge&logo=android&logoColor=white" alt="Download APK Release v1.0.0" />
-  </a>
-  <a href="https://github.com/rhsa-fr/UpahKU/releases/latest">
-    <img src="https://img.shields.io/github/v/release/rhsa-fr/UpahKU?style=for-the-badge&color=0F1F3D&label=LATEST%20RELEASE" alt="Latest Release" />
-  </a>
+  <img src="https://img.shields.io/badge/Platform-Android-0F1F3D?style=for-the-badge&logo=android&logoColor=10B981" alt="Platform Android" />
+  <img src="https://img.shields.io/badge/Database-Offline_First-10B981?style=for-the-badge&logo=sqlite&logoColor=white" alt="Offline First" />
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT License" />
 </p>
-
----
-
-> [!IMPORTANT]
-> **[📱 UNDUH FILE APK RELEASE RESMI (v1.0.0)](https://github.com/rhsa-fr/UpahKU/releases/download/v1.0.0/app-release.apk)**
-> 
-> Klik link di atas untuk langsung mengunduh file APK rilis produksi aplikasi **UpahKu** (Ukuran: **61.28 MB**) di HP Android Anda. **100% Gratis, Tanpa Iklan, & Tanpa Biaya Berlangganan!**
 
 ---
 
@@ -88,15 +77,6 @@ Mengelola penggajian harian secara manual menggunakan kertas atau spreadsheet se
 
 ---
 
-## 📲 Link Unduh APK Production Release
-
-> [!TIP]
-> **[📥 Direct Download UpahKu Production Release APK (v1.0.0)](https://github.com/rhsa-fr/UpahKU/releases/download/v1.0.0/app-release.apk)**
-> 
-> Halaman Rilis GitHub Resmi: **[https://github.com/rhsa-fr/UpahKU/releases/tag/v1.0.0](https://github.com/rhsa-fr/UpahKU/releases/tag/v1.0.0)**
-
----
-
 ## 🎨 Desain & Kenyamanan Pengguna
 
 * **Material 3 Design System**: Tampilan antarmuka modern yang bersih, cepat, dan nyaman digunakan dalam waktu lama.
@@ -111,7 +91,11 @@ Proyek ini dirilis di bawah lisensi **[MIT License](LICENSE)**. Anda bebas mengg
 
 ---
 
+## 📲 Unduh Aplikasi
+
+> [!TIP]
+> **[📥 Download UpahKu Production Release APK (v1.0.0)](https://github.com/rhsa-fr/UpahKU/releases/download/v1.0.0/app-release.apk)**
+
 <p align="center">
-  <strong>UpahKu — Penggajian Harian Offline</strong><br/>
-  <a href="https://github.com/rhsa-fr/UpahKU/releases/download/v1.0.0/app-release.apk"><strong>Unduh File APK Sekarang</strong></a>
+  <strong>UpahKu — Penggajian Harian Offline</strong>
 </p>
