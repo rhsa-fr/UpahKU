@@ -39,8 +39,8 @@ class IsarServiceImpl implements IsarService {
   Future<void> _doInit() async {
     if (_isar != null && _isar!.isOpen) return;
 
-    // Check if the default Isar instance is already open globally (common during hot restarts)
-    final existingInstance = Isar.getInstance();
+    // Check if the 'upahku_db' Isar instance is already open globally (common during hot restarts)
+    final existingInstance = Isar.getInstance('upahku_db');
     if (existingInstance != null && existingInstance.isOpen) {
       _isar = existingInstance;
       return;
@@ -52,27 +52,18 @@ class IsarServiceImpl implements IsarService {
       path = dir.path;
     }
 
-    try {
-      _isar = await Isar.open(
-        [
-          KaryawanModelSchema,
-          AbsensiModelSchema,
-          LemburModelSchema,
-          TransaksiTambahanModelSchema,
-          PenggajianModelSchema,
-        ],
-        directory: path,
-        inspector: !kIsWeb,
-      );
-    } catch (e) {
-      // If Isar.open failed (e.g. because it was opened concurrently), check if it's open now
-      final fallbackInstance = Isar.getInstance();
-      if (fallbackInstance != null && fallbackInstance.isOpen) {
-        _isar = fallbackInstance;
-      } else {
-        rethrow;
-      }
-    }
+    _isar = await Isar.open(
+      [
+        KaryawanModelSchema,
+        AbsensiModelSchema,
+        LemburModelSchema,
+        TransaksiTambahanModelSchema,
+        PenggajianModelSchema,
+      ],
+      name: 'upahku_db',
+      directory: path,
+      inspector: kDebugMode && !kIsWeb, // ONLY enable inspector in debug mode
+    );
   }
 
   @override
@@ -87,14 +78,13 @@ class IsarServiceImpl implements IsarService {
   Future<String> backupDb(String targetDir) async {
     final isarDb = await db;
     
-    // Isar default database file name is 'default.isar' unless specified otherwise in Isar.open.
     // Ensure the target directory exists.
     final targetDirectory = Directory(targetDir);
     if (!await targetDirectory.exists()) {
       await targetDirectory.create(recursive: true);
     }
 
-    final backupFile = File('$targetDir/dailypayroll_backup_${DateTime.now().millisecondsSinceEpoch}.isar');
+    final backupFile = File('$targetDir/upahku_backup_${DateTime.now().millisecondsSinceEpoch}.isar');
     if (await backupFile.exists()) {
       await backupFile.delete();
     }
@@ -111,16 +101,20 @@ class IsarServiceImpl implements IsarService {
 
     // To restore:
     // 1. Close current Isar
-    // 2. Overwrite default.isar with backup
+    // 2. Overwrite upahku_db.isar with backup
     // 3. Reinitialize
     await close();
 
     final dir = await getApplicationDocumentsDirectory();
-    final currentDbFile = File('${dir.path}/default.isar');
+    final currentDbFile = File('${dir.path}/upahku_db.isar');
+    final lockFile = File('${dir.path}/upahku_db.isar.lock');
     
-    // Overwrite default.isar
+    // Overwrite upahku_db.isar
     if (await currentDbFile.exists()) {
       await currentDbFile.delete();
+    }
+    if (await lockFile.exists()) {
+      await lockFile.delete();
     }
     
     await backupFile.copy(currentDbFile.path);

@@ -15,7 +15,7 @@ extension GetAbsensiModelCollection on Isar {
 
 const AbsensiModelSchema = CollectionSchema(
   name: r'Absensi',
-  id: -398638491105963,
+  id: -39863849,
   properties: {
     r'status': PropertySchema(
       id: 0,
@@ -35,7 +35,7 @@ const AbsensiModelSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'tanggal': IndexSchema(
-      id: 519307059700219,
+      id: 51930705,
       name: r'tanggal',
       unique: false,
       replace: false,
@@ -50,7 +50,7 @@ const AbsensiModelSchema = CollectionSchema(
   },
   links: {
     r'karyawan': LinkSchema(
-      id: 631885456690319,
+      id: 63188545,
       name: r'karyawan',
       target: r'Karyawan',
       single: true,

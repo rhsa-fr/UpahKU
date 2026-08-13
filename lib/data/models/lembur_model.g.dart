@@ -15,7 +15,7 @@ extension GetLemburModelCollection on Isar {
 
 const LemburModelSchema = CollectionSchema(
   name: r'Lembur',
-  id: 689825664465960,
+  id: 68982566,
   properties: {
     r'jumlahJam': PropertySchema(
       id: 0,
@@ -35,7 +35,7 @@ const LemburModelSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'tanggal': IndexSchema(
-      id: 519307059700219,
+      id: 51930705,
       name: r'tanggal',
       unique: false,
       replace: false,
@@ -50,7 +50,7 @@ const LemburModelSchema = CollectionSchema(
   },
   links: {
     r'karyawan': LinkSchema(
-      id: 297011438826529,
+      id: 29701143,
       name: r'karyawan',
       target: r'Karyawan',
       single: true,

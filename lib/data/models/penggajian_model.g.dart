@@ -15,7 +15,7 @@ extension GetPenggajianModelCollection on Isar {
 
 const PenggajianModelSchema = CollectionSchema(
   name: r'Penggajian',
-  id: 789214106941656,
+  id: 78921410,
   properties: {
     r'pathPdf': PropertySchema(
       id: 0,
@@ -111,7 +111,7 @@ const PenggajianModelSchema = CollectionSchema(
   indexes: {},
   links: {
     r'karyawan': LinkSchema(
-      id: -805761883494767,
+      id: -80576188,
       name: r'karyawan',
       target: r'Karyawan',
       single: true,

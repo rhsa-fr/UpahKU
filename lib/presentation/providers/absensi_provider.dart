@@ -99,9 +99,36 @@ class AbsensiNotifier extends StateNotifier<AsyncValue<List<AbsensiModel>>> {
       _ref.invalidate(dashboardProvider);
     }
   }
+
+  Future<void> saveBulkAbsensi({
+    required List<int> karyawanIds,
+    required DateTime startDate,
+    required DateTime endDate,
+    required String status,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      await _repository.saveBulkAbsensi(
+        karyawanIds: karyawanIds,
+        startDate: startDate,
+        endDate: endDate,
+        status: status,
+      );
+      
+      // Reload current date's attendance
+      await loadAbsensi();
+      
+      // Invalidate dashboard provider to update stats
+      _ref.invalidate(dashboardProvider);
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
+      rethrow;
+    }
+  }
 }
 
 final absensiProvider = StateNotifierProvider.family<AbsensiNotifier, AsyncValue<List<AbsensiModel>>, DateTime>((ref, tanggal) {
   final repo = ref.watch(absensiRepositoryProvider);
+  ref.watch(karyawanProvider); // Automatically reload attendance list when employee list changes
   return AbsensiNotifier(repo, ref, tanggal);
 });

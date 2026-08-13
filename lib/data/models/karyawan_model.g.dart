@@ -15,7 +15,7 @@ extension GetKaryawanModelCollection on Isar {
 
 const KaryawanModelSchema = CollectionSchema(
   name: r'Karyawan',
-  id: 465754058898660,
+  id: 46575405,
   properties: {
     r'createdAt': PropertySchema(
       id: 0,
@@ -55,7 +55,7 @@ const KaryawanModelSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'nama': IndexSchema(
-      id: 503954265355155,
+      id: 50395426,
       name: r'nama',
       unique: true,
       replace: false,

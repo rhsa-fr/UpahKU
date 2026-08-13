@@ -16,7 +16,7 @@ extension GetTransaksiTambahanModelCollection on Isar {
 
 const TransaksiTambahanModelSchema = CollectionSchema(
   name: r'TransaksiTambahan',
-  id: -916022804265171,
+  id: -91602280,
   properties: {
     r'keterangan': PropertySchema(
       id: 0,
@@ -46,7 +46,7 @@ const TransaksiTambahanModelSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'tanggal': IndexSchema(
-      id: 519307059700219,
+      id: 51930705,
       name: r'tanggal',
       unique: false,
       replace: false,
@@ -61,7 +61,7 @@ const TransaksiTambahanModelSchema = CollectionSchema(
   },
   links: {
     r'karyawan': LinkSchema(
-      id: -142618074459664,
+      id: -14261807,
       name: r'karyawan',
       target: r'Karyawan',
       single: true,

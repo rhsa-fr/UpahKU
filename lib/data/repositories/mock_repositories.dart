@@ -90,6 +90,44 @@ class AbsensiRepositoryMock implements AbsensiRepository {
       await saveAbsensi(a);
     }
   }
+
+  @override
+  Future<void> saveBulkAbsensi({
+    required List<int> karyawanIds,
+    required DateTime startDate,
+    required DateTime endDate,
+    required String status,
+  }) async {
+    final start = DateTime(startDate.year, startDate.month, startDate.day);
+    final end = DateTime(endDate.year, endDate.month, endDate.day);
+    final daysDiff = end.difference(start).inDays;
+
+    for (int i = 0; i <= daysDiff; i++) {
+      final currentDate = start.add(Duration(days: i));
+      for (var karyawanId in karyawanIds) {
+        final karyawanObj = InMemoryDb.karyawanList.firstWhere(
+          (k) => k.id == karyawanId,
+          orElse: () => KaryawanModel()..id = karyawanId,
+        );
+
+        final index = InMemoryDb.absensiList.indexWhere(
+          (a) => a.karyawan.value?.id == karyawanId && 
+                 DateTime(a.tanggal.year, a.tanggal.month, a.tanggal.day).isAtSameMomentAs(currentDate),
+        );
+
+        if (index != -1) {
+          InMemoryDb.absensiList[index].status = status;
+        } else {
+          final newAbs = AbsensiModel()
+            ..id = InMemoryDb.absensiList.length + 1
+            ..tanggal = currentDate
+            ..status = status;
+          newAbs.karyawan.value = karyawanObj;
+          InMemoryDb.absensiList.add(newAbs);
+        }
+      }
+    }
+  }
 }
 
 class LemburRepositoryMock implements LemburRepository {

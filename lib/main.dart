@@ -24,22 +24,9 @@ void main() async {
     debugPrint('Error initializing date formatting: $e');
   }
 
-  // Initialize Isar database synchronously on startup (Android only)
-  final isarService = IsarServiceImpl();
-  if (!kIsWeb) {
-    try {
-      await isarService.init();
-    } catch (e) {
-      debugPrint('Error initializing Isar Database: $e');
-    }
-  }
-
   runApp(
-    ProviderScope(
-      overrides: [
-        isarServiceProvider.overrideWithValue(isarService),
-      ],
-      child: const MyApp(),
+    const ProviderScope(
+      child: MyApp(),
     ),
   );
 }
