@@ -295,11 +295,21 @@ MIT — lihat [LICENSE](LICENSE).
 
 ## Unduh
 
-> [!TIP]
-> Rilis APK terakhir: **[UpahKu v1.0.0](https://github.com/rhsa-fr/UpahKU/releases/download/v1.0.0/app-release.apk)**
->
-> Untuk versi terbaru dengan desain di atas, build dari source:
-> `flutter build apk --release`.
+<p align="center">
+  <a href="https://github.com/rhsa-fr/UpahKU/releases/download/v1.1.0/app-release.apk">
+    <strong>Unduh UpahKu v1.1.0 — APK 62,6 MB</strong>
+  </a>
+</p>
+
+- Minimal **Android 7.0 (API 24)**, arsitektur arm64-v8a / armeabi-v7a / x86_64.
+- APK ditandatangani **release key** (`CN=UpahKu`), bukan debug key.
+- Versi lain: [semua rilis](https://github.com/rhsa-fr/UpahKU/releases).
+- `SHA256 592E4940944FCADF776B1EA288879C23B03D5286DAB1B4D88FB85C514DBA97AB`
+
+> [!IMPORTANT]
+> Sudah pernah memasang **v1.0.0**? Versi itu memakai debug key, jadi Android menolak update
+> (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`). Backup dulu lewat **Lainnya → Backup**, uninstall v1.0.0,
+> pasang v1.1.0, lalu restore backup.
 
 <p align="center">
   <strong>UpahKu — payroll harian, tanpa internet.</strong>
