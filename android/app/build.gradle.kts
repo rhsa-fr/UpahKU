@@ -14,6 +14,22 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// Flutter meneruskan `--target-platform` sebagai properti Gradle. Petakan ke ABI
+// Android supaya .so milik plugin (Isar) untuk arsitektur lain ikut terbuang.
+val flutterTargetAbis: List<String> = (project.findProperty("target-platform") as String?)
+    ?.split(",")
+    ?.map { it.trim() }
+    ?.mapNotNull { platform ->
+        when (platform) {
+            "android-arm64" -> "arm64-v8a"
+            "android-arm" -> "armeabi-v7a"
+            "android-x64" -> "x86_64"
+            else -> null
+        }
+    }
+    ?.distinct()
+    ?: emptyList()
+
 android {
     namespace = "com.dailypayroll.daily_payroll"
     compileSdk = 36
@@ -64,6 +80,15 @@ android {
             // to prevent stripping/obfuscating native Isar libraries and schemas
             isMinifyEnabled = false
             isShrinkResources = false
+
+            // Dipasang di sini (bukan defaultConfig) karena FlutterPlugin mengisi
+            // ulang abiFilters di level buildType saat plugin di-apply.
+            if (flutterTargetAbis.isNotEmpty()) {
+                ndk {
+                    abiFilters.clear()
+                    abiFilters.addAll(flutterTargetAbis)
+                }
+            }
         }
     }
 }

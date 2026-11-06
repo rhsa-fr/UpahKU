@@ -224,8 +224,15 @@ flutter run
 Build Android:
 
 ```bash
+# universal (~62 MB, semua ABI)
 flutter build apk --release
+
+# hemat ukuran: satu ABI saja (~24 MB, HP modern)
+flutter build apk --release --target-platform android-arm64
 ```
+
+`--target-platform` juga memangkas `.so` plugin (Isar) milik ABI lain, jadi APK
+benar-benar hanya memuat satu arsitektur tapi `versionCode` tetap sama.
 
 ### Preview web
 
@@ -296,15 +303,22 @@ MIT — lihat [LICENSE](LICENSE).
 ## Unduh
 
 <p align="center">
-  <a href="https://github.com/rhsa-fr/UpahKU/releases/download/v1.1.0/app-release.apk">
-    <strong>Unduh UpahKu v1.1.0 — APK 62,6 MB</strong>
-  </a>
+  <a href="https://github.com/rhsa-fr/UpahKU/releases/download/v1.1.0/upahku-v1.1.0-arm64-v8a.apk">
+    <strong>Unduh UpahKu v1.1.0 — APK 24,4 MB (arm64)</strong>
+  </a><br/>
+  <sub>atau <a href="https://github.com/rhsa-fr/UpahKU/releases/download/v1.1.0/upahku-v1.1.0-universal.apk">versi universal 62,6 MB</a> untuk HP lama/emulator</sub>
 </p>
 
-- Minimal **Android 7.0 (API 24)**, arsitektur arm64-v8a / armeabi-v7a / x86_64.
+| File | Ukuran | Untuk |
+|---|---|---|
+| `upahku-v1.1.0-arm64-v8a.apk` | 24,4 MB | **Disarankan** — HP Android modern |
+| `upahku-v1.1.0-universal.apk` | 62,6 MB | HP 32-bit lama, emulator |
+
+- Minimal **Android 7.0 (API 24)**. Kedua APK versionCode 2 dan bertanda tangan sama — pasang salah satu.
 - APK ditandatangani **release key** (`CN=UpahKu`), bukan debug key.
 - Versi lain: [semua rilis](https://github.com/rhsa-fr/UpahKU/releases).
-- `SHA256 592E4940944FCADF776B1EA288879C23B03D5286DAB1B4D88FB85C514DBA97AB`
+- `SHA256 arm64 21E50EE8575C1F3B6C88F18F17E9AC1FCD01D7F4216A0DB54983259401B757C9`
+- `SHA256 universal 592E4940944FCADF776B1EA288879C23B03D5286DAB1B4D88FB85C514DBA97AB`
 
 > [!IMPORTANT]
 > Sudah pernah memasang **v1.0.0**? Versi itu memakai debug key, jadi Android menolak update
