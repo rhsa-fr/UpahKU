@@ -1,0 +1,6 @@
+# Copy ke file `android/key.properties` lalu isi nilai sebenarnya.
+# File `key.properties` dan keystore TIDAK boleh di-commit.
+storePassword=ISI_PASSWORD_KEYSTORE
+keyPassword=ISI_PASSWORD_KEY
+keyAlias=upahku
+storeFile=../keystore/upahku-release.jks

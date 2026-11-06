@@ -6,7 +6,6 @@ import '../../data/repositories/transaksi_tambahan_repository_impl.dart';
 import '../../data/repositories/mock_repositories.dart';
 import '../../domain/repositories/transaksi_tambahan_repository.dart';
 import 'karyawan_provider.dart';
-import 'absensi_provider.dart';
 import 'dashboard_provider.dart';
 
 final transaksiTambahanRepositoryProvider = Provider<TransaksiTambahanRepository>((ref) {

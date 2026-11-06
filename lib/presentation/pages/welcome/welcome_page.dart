@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../providers/onboarding_provider.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/theme/typography.dart';
+import '../../widgets/ds/design_system.dart';
 
 class WelcomePage extends ConsumerStatefulWidget {
   const WelcomePage({super.key});
@@ -15,92 +18,111 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
+  static const int _pageCount = 3;
+
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
 
-  void _onPageChanged(int index) {
-    setState(() {
-      _currentPage = index;
-    });
-  }
-
-  void _completeOnboarding() {
-    ref.read(onboardingProvider.notifier).completeOnboarding();
-  }
+  void _completeOnboarding() => ref.read(onboardingProvider.notifier).completeOnboarding();
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ColorScheme s = Theme.of(context).colorScheme;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final bool isLast = _currentPage == _pageCount - 1;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : const Color(0xFFF5F7FA),
+      backgroundColor: s.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        centerTitle: false,
+        systemOverlayStyle:
+            isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         actions: [
-          if (_currentPage < 2)
-            TextButton(
-              onPressed: _completeOnboarding,
-              child: Text(
-                'Lewati',
-                style: TextStyle(
-                  color: isDark ? AppColors.textSecondaryDark : const Color(0xFF6B7280),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
+          if (!isLast)
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.md),
+              child: TextButton(
+                onPressed: _completeOnboarding,
+                child: const Text('Lewati'),
               ),
             ),
         ],
       ),
       body: SafeArea(
-        child: Stack(
+        top: false,
+        child: Column(
           children: [
-            // Premium background blobs
-            Positioned(
-              top: -80,
-              right: -80,
-              child: Container(
-                width: 250,
-                height: 250,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.emerald.withOpacity(isDark ? 0.08 : 0.06),
-                ),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (int i) => setState(() => _currentPage = i),
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  _BrandSlide(logoAsset: _logoAsset(context)),
+                  const _FeaturesSlide(),
+                  const _OfflineSlide(),
+                ],
               ),
             ),
-            Positioned(
-              bottom: 80,
-              left: -100,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.navy.withOpacity(isDark ? 0.15 : 0.05),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.md,
+                  AppSpacing.xl,
+                  AppSpacing.lg,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: List.generate(_pageCount, (int i) {
+                        final bool active = i == _currentPage;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          margin: const EdgeInsets.only(right: 6),
+                          height: 8,
+                          width: active ? 26 : 8,
+                          decoration: BoxDecoration(
+                            color: active ? s.primary : s.outlineVariant,
+                            borderRadius: AppRadius.rPill,
+                          ),
+                        );
+                      }),
+                    ),
+                    SizedBox(
+                      height: 52,
+                      width: isLast ? 168 : 52,
+                      child: FilledButton(
+                        onPressed: () {
+                          if (isLast) {
+                            _completeOnboarding();
+                          } else {
+                            _pageController.nextPage(
+                              duration: const Duration(milliseconds: 320),
+                              curve: Curves.easeInOut,
+                            );
+                          }
+                        },
+                        style: FilledButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          shape: const RoundedRectangleBorder(borderRadius: AppRadius.rPill),
+                        ),
+                        child: isLast
+                            ? const Text('Mulai Sekarang')
+                            : const Icon(Icons.arrow_forward_rounded, size: 20),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            // Content
-            Column(
-              children: [
-                Expanded(
-                  child: PageView(
-                    controller: _pageController,
-                    onPageChanged: _onPageChanged,
-                    physics: const BouncingScrollPhysics(),
-                    children: [
-                      _buildSlide1(context, isDark),
-                      _buildSlide2(context, isDark),
-                      _buildSlide3(context, isDark),
-                    ],
-                  ),
-                ),
-                _buildBottomControls(context, isDark),
-              ],
             ),
           ],
         ),
@@ -108,397 +130,224 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
     );
   }
 
-  // --- Slide 1: Welcome & Brand ---
-  Widget _buildSlide1(BuildContext context, bool isDark) {
+  static String _logoAsset(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? 'assets/images/logo_dark.png'
+          : 'assets/images/logo_light.png';
+}
+
+class _BrandSlide extends StatelessWidget {
+  const _BrandSlide({required this.logoAsset});
+
+  final String logoAsset;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme s = Theme.of(context).colorScheme;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28.0),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded(
-            flex: 5,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: Image.asset(
-                      isDark ? 'assets/images/logo_dark.png' : 'assets/images/logo_light.png',
-                      height: 120,
-                      width: 120,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // App Name
-                  Text(
-                    'UpahKu',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : AppColors.navy,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.emerald.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Penggajian Harian Offline',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.emerald,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          ClipRRect(
+            borderRadius: AppRadius.rXl,
+            child: Image.asset(logoAsset, height: 112, width: 112, fit: BoxFit.cover),
           ),
-          const SizedBox(height: 24),
-          Expanded(
-            flex: 3,
-            child: Column(
-              children: [
-                Text(
-                  'Kelola Penggajian Karyawan Lebih Mudah',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : AppColors.navy,
-                    height: 1.25,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Catat absensi, lembur, bonus, dan hitung gaji harian secara otomatis dalam satu aplikasi.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.mediumGray,
-                    height: 1.45,
-                  ),
-                ),
-              ],
-            ),
+          const SizedBox(height: AppSpacing.lg),
+          Text('UpahKu', style: AppTypography.displayLg.copyWith(color: s.primary)),
+          const SizedBox(height: AppSpacing.sm),
+          const DsPill(
+            label: 'Penggajian Harian Offline',
+            tone: DsTone.secondary,
+            icon: Icons.offline_bolt_rounded,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Text(
+            'Kelola Penggajian Karyawan Lebih Mudah',
+            textAlign: TextAlign.center,
+            style: AppTypography.headlineLgMobile.copyWith(color: s.onSurface),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Catat absensi, lembur, bonus, dan hitung gaji harian secara '
+            'otomatis dalam satu aplikasi.',
+            textAlign: TextAlign.center,
+            style: AppTypography.bodyLg.copyWith(color: s.onSurfaceVariant),
           ),
         ],
       ),
     );
   }
+}
 
-  // --- Slide 2: Main Features ---
-  Widget _buildSlide2(BuildContext context, bool isDark) {
-    final List<Map<String, dynamic>> features = [
-      {'title': 'Data Karyawan', 'icon': Icons.people_outline, 'color': AppColors.navy},
-      {'title': 'Absensi Harian', 'icon': Icons.assignment_ind_outlined, 'color': AppColors.emerald},
-      {'title': 'Lembur', 'icon': Icons.schedule_outlined, 'color': Colors.amber[800]},
-      {'title': 'Bonus & Potongan', 'icon': Icons.add_card_outlined, 'color': Colors.purple},
-      {'title': 'Slip Gaji PDF', 'icon': Icons.picture_as_pdf_outlined, 'color': Colors.red},
-      {'title': 'Backup Data', 'icon': Icons.backup_outlined, 'color': Colors.blue},
-    ];
+class _FeaturesSlide extends StatelessWidget {
+  const _FeaturesSlide();
+
+  static const List<({String title, IconData icon, DsTone tone})> _features = [
+    (title: 'Data Karyawan', icon: Icons.badge_rounded, tone: DsTone.primary),
+    (title: 'Absensi Harian', icon: Icons.fact_check_rounded, tone: DsTone.success),
+    (title: 'Lembur', icon: Icons.schedule_rounded, tone: DsTone.warning),
+    (title: 'Bonus & Potongan', icon: Icons.add_card_rounded, tone: DsTone.info),
+    (title: 'Slip Gaji PDF', icon: Icons.picture_as_pdf_rounded, tone: DsTone.danger),
+    (title: 'Backup Data', icon: Icons.backup_rounded, tone: DsTone.secondary),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme s = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           Text(
             'Semua Kebutuhan dalam Satu Aplikasi',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : AppColors.navy,
-              height: 1.25,
-            ),
+            style: AppTypography.headlineLgMobile.copyWith(color: s.onSurface),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.lg),
           Expanded(
-            child: GridView.builder(
+            child: GridView.count(
+              crossAxisCount: 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 1.5,
-              ),
-              itemCount: features.length,
-              itemBuilder: (context, index) {
-                final feat = features[index];
-                return Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.surfaceDark : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0),
-                      width: 1.2,
+              crossAxisSpacing: AppSpacing.md,
+              mainAxisSpacing: AppSpacing.md,
+              childAspectRatio: 1.55,
+              children: [
+                for (final ({IconData icon, DsTone tone, String title}) f in _features)
+                  DsCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: f.tone.bg(s),
+                            borderRadius: AppRadius.rSm,
+                          ),
+                          child: Icon(f.icon, size: 18, color: f.tone.fg(s)),
+                        ),
+                        Text(
+                          f.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.titleMd.copyWith(
+                            color: s.onSurface,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: (feat['color'] as Color).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          feat['icon'] as IconData,
-                          color: feat['color'] as Color,
-                          size: 20,
-                        ),
-                      ),
-                      Text(
-                        feat['title'] as String,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : AppColors.navy,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+              ],
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  // --- Slide 3: Offline Ready ---
-  Widget _buildSlide3(BuildContext context, bool isDark) {
+class _OfflineSlide extends StatelessWidget {
+  const _OfflineSlide();
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme s = Theme.of(context).colorScheme;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28.0),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded(
-            flex: 5,
-            child: Center(
-              child: _buildOfflineMockup(context, isDark),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            flex: 4,
-            child: Column(
-              children: [
-                Text(
-                  'Siap Digunakan Kapan Saja',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : AppColors.navy,
-                    height: 1.25,
-                  ),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 210,
+                height: 210,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: s.primary.withValues(alpha: 0.05),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Seluruh data disimpan langsung di perangkat Android tanpa internet maupun server. Aman, cepat, dan rahasia.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.mediumGray,
-                    height: 1.45,
-                  ),
+              ),
+              Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: s.secondaryContainer.withValues(alpha: 0.45),
                 ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOfflineMockup(BuildContext context, bool isDark) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        // Outer glow rings
-        Container(
-          width: 190,
-          height: 190,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.emerald.withOpacity(0.04),
-          ),
-        ),
-        Container(
-          width: 140,
-          height: 140,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.emerald.withOpacity(0.08),
-          ),
-        ),
-        // Center Phone Mockup
-        Container(
-          width: 110,
-          height: 180,
-          decoration: BoxDecoration(
-            color: AppColors.navy,
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.navy.withOpacity(0.2),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
+              ),
+              Container(
+                width: 104,
+                height: 168,
+                decoration: BoxDecoration(
+                  color: s.primary,
+                  borderRadius: AppRadius.rXl,
+                  boxShadow: AppShadows.level2,
+                ),
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: s.onPrimary,
+                        borderRadius: AppRadius.rSm,
+                      ),
+                      child: Icon(Icons.payments_rounded, color: s.primary, size: 22),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    for (final double w in const [56.0, 40.0, 48.0]) ...[
+                      Container(
+                        height: 6,
+                        width: w,
+                        decoration: BoxDecoration(
+                          color: s.onPrimary.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                  ],
+                ),
+              ),
+              Positioned(
+                right: 6,
+                bottom: 10,
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm + 2),
+                  decoration: BoxDecoration(
+                    color: s.primary,
+                    shape: BoxShape.circle,
+                    boxShadow: AppShadows.level2,
+                  ),
+                  child: Icon(Icons.shield_rounded, color: s.onPrimary, size: 20),
+                ),
               ),
             ],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo inside phone
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.asset(
-                    isDark ? 'assets/images/logo_dark.png' : 'assets/images/logo_light.png',
-                    height: 40,
-                    width: 40,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  width: 50,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  width: 35,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.backgroundDark : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ],
-            ),
+          const SizedBox(height: AppSpacing.xl),
+          Text(
+            'Siap Digunakan Kapan Saja',
+            textAlign: TextAlign.center,
+            style: AppTypography.headlineLgMobile.copyWith(color: s.onSurface),
           ),
-        ),
-        // Floating Shield badge
-        Positioned(
-          bottom: 12,
-          right: 12,
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.emerald,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.emerald.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.shield,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // --- Bottom Controls (Indicators & Next/Done Action Button) ---
-  Widget _buildBottomControls(BuildContext context, bool isDark) {
-    final isLastPage = _currentPage == 2;
-
-    return Padding(
-      padding: const EdgeInsets.all(28.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Dot Page Indicators
-          Row(
-            children: List.generate(
-              3,
-              (index) => AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                height: 8.0,
-                width: _currentPage == index ? 24.0 : 8.0,
-                decoration: BoxDecoration(
-                  color: _currentPage == index
-                      ? AppColors.navy
-                      : (isDark ? AppColors.borderDark : const Color(0xFFCBD5E1)),
-                  borderRadius: BorderRadius.circular(4.0),
-                ),
-              ),
-            ),
-          ),
-          // Action button
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: isLastPage ? 160 : 60,
-            height: 54,
-            child: ElevatedButton(
-              onPressed: () {
-                if (isLastPage) {
-                  _completeOnboarding();
-                } else {
-                  _pageController.nextPage(
-                    duration: const Duration(milliseconds: 350),
-                    curve: Curves.easeInOut,
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.emerald,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(27),
-                ),
-                padding: EdgeInsets.zero,
-                elevation: 0,
-              ),
-              child: isLastPage
-                  ? const Text(
-                      'Mulai Sekarang',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.2,
-                      ),
-                    )
-                  : const Icon(
-                      Icons.arrow_forward,
-                      size: 22,
-                    ),
-            ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Seluruh data disimpan langsung di perangkat Android tanpa internet '
+            'maupun server. Aman, cepat, dan rahasia.',
+            textAlign: TextAlign.center,
+            style: AppTypography.bodyLg.copyWith(color: s.onSurfaceVariant),
           ),
         ],
       ),

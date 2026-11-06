@@ -1,17 +1,18 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+
 import '../../providers/karyawan_provider.dart';
 import '../../providers/penggajian_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/theme_provider.dart';
-
-import '../../widgets/background_wrapper.dart';
+import '../../../core/constants/colors.dart';
+import '../../../core/theme/typography.dart';
+import '../../widgets/ds/design_system.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -21,301 +22,284 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  final _formKey = GlobalKey<FormState>();
-  late TextEditingController _namaUsahaController;
-  late TextEditingController _alamatUsahaController;
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late final TextEditingController _namaUsaha;
+  late final TextEditingController _alamatUsaha;
 
   @override
   void initState() {
     super.initState();
-    final settings = ref.read(settingsProvider);
-    _namaUsahaController = TextEditingController(text: settings.namaUsaha);
-    _alamatUsahaController = TextEditingController(text: settings.alamatUsaha);
+    final SettingsData settings = ref.read(settingsProvider);
+    _namaUsaha = TextEditingController(text: settings.namaUsaha);
+    _alamatUsaha = TextEditingController(text: settings.alamatUsaha);
   }
 
   @override
   void dispose() {
-    _namaUsahaController.dispose();
-    _alamatUsahaController.dispose();
+    _namaUsaha.dispose();
+    _alamatUsaha.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<SettingsData>(settingsProvider, (previous, next) {
-      _namaUsahaController.text = next.namaUsaha;
-      _alamatUsahaController.text = next.alamatUsaha;
+    ref.listen<SettingsData>(settingsProvider, (SettingsData? _, SettingsData next) {
+      _namaUsaha.text = next.namaUsaha;
+      _alamatUsaha.text = next.alamatUsaha;
     });
 
-    return BackgroundWrapper(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          title: const Text('Pengaturan'),
+    final ColorScheme s = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      backgroundColor: s.surface,
+      appBar: AppBar(
+        backgroundColor: s.surface,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        title: Text(
+          'Pengaturan',
+          style: AppTypography.headlineMd.copyWith(color: s.onSurface),
         ),
-        body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Section 1: Profil Usaha
-            Text(
-              'Profil Usaha (Header Slip Gaji)',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Form(
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.margin,
+          AppSpacing.sm,
+          AppSpacing.margin,
+          AppSpacing.xl,
+        ),
+        children: [
+          DsCard(
+            child: Form(
               key: _formKey,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Text(
+                    'PROFIL USAHA',
+                    style: AppTypography.labelMd.copyWith(
+                      color: s.onSurfaceVariant,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Dipakai sebagai header slip gaji PDF.',
+                    style: AppTypography.bodyMd.copyWith(color: s.outline),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
                   TextFormField(
-                    controller: _namaUsahaController,
+                    controller: _namaUsaha,
                     decoration: const InputDecoration(
                       labelText: 'Nama Usaha',
-                      prefixIcon: Icon(Icons.storefront_outlined),
+                      prefixIcon: Icon(Icons.storefront_rounded),
                     ),
-                    validator: (val) =>
-                        val == null || val.trim().isEmpty ? 'Nama usaha wajib diisi' : null,
+                    validator: (String? v) =>
+                        (v == null || v.trim().isEmpty) ? 'Nama usaha wajib diisi' : null,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   TextFormField(
-                    controller: _alamatUsahaController,
+                    controller: _alamatUsaha,
+                    maxLines: 2,
                     decoration: const InputDecoration(
                       labelText: 'Alamat Usaha',
-                      prefixIcon: Icon(Icons.location_on_outlined),
+                      prefixIcon: Icon(Icons.location_on_rounded),
                     ),
-                    maxLines: 2,
-                    validator: (val) =>
-                        val == null || val.trim().isEmpty ? 'Alamat usaha wajib diisi' : null,
+                    validator: (String? v) =>
+                        (v == null || v.trim().isEmpty) ? 'Alamat usaha wajib diisi' : null,
                   ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
+                  const SizedBox(height: AppSpacing.md),
+                  FilledButton.icon(
                     onPressed: _saveProfile,
-                    child: const Text('Simpan Profil'),
+                    icon: const Icon(Icons.save_rounded, size: 18),
+                    label: const Text('Simpan Profil'),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
-            const Divider(),
-            const SizedBox(height: 24),
-            // Section: Tema / Tampilan
-            Text(
-              'Tampilan Aplikasi (Tema)',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              margin: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Mode Tema',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
+          ),
+          DsCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'TAMPILAN APLIKASI',
+                  style: AppTypography.labelMd.copyWith(
+                    color: s.onSurfaceVariant,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                SegmentedButton<ThemeMode>(
+                  showSelectedIcon: false,
+                  style: SegmentedButton.styleFrom(
+                    selectedBackgroundColor: s.primary,
+                    selectedForegroundColor: s.onPrimary,
+                  ),
+                  segments: const [
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.light,
+                      icon: Icon(Icons.light_mode_rounded, size: 18),
+                      label: Text('Terang'),
                     ),
-                    SegmentedButton<ThemeMode>(
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment<ThemeMode>(
-                          value: ThemeMode.light,
-                          icon: Icon(Icons.light_mode_outlined, size: 18),
-                          label: Text('Terang', style: TextStyle(fontSize: 12)),
-                        ),
-                        ButtonSegment<ThemeMode>(
-                          value: ThemeMode.dark,
-                          icon: Icon(Icons.dark_mode_outlined, size: 18),
-                          label: Text('Gelap', style: TextStyle(fontSize: 12)),
-                        ),
-                        ButtonSegment<ThemeMode>(
-                          value: ThemeMode.system,
-                          icon: Icon(Icons.settings_suggest_outlined, size: 18),
-                          label: Text('Sistem', style: TextStyle(fontSize: 12)),
-                        ),
-                      ],
-                      selected: {ref.watch(themeModeProvider)},
-                      onSelectionChanged: (Set<ThemeMode> newSelection) {
-                        ref.read(themeModeProvider.notifier).setThemeMode(newSelection.first);
-                      },
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.dark,
+                      icon: Icon(Icons.dark_mode_rounded, size: 18),
+                      label: Text('Gelap'),
+                    ),
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.system,
+                      icon: Icon(Icons.settings_suggest_rounded, size: 18),
+                      label: Text('Sistem'),
                     ),
                   ],
+                  selected: {ref.watch(themeModeProvider)},
+                  onSelectionChanged: (Set<ThemeMode> sel) =>
+                      ref.read(themeModeProvider.notifier).setThemeMode(sel.first),
                 ),
+              ],
+            ),
+          ),
+          if (!kIsWeb)
+            DsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'BACKUP & RESTORE',
+                    style: AppTypography.labelMd.copyWith(
+                      color: s.onSurfaceVariant,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Semua data tersimpan lokal. Backup berkala agar aman.',
+                    style: AppTypography.bodyMd.copyWith(color: s.outline),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  DsActionTile(
+                    icon: Icons.cloud_upload_rounded,
+                    tone: DsTone.info,
+                    title: 'Ekspor Database',
+                    subtitle: 'Simpan atau kirim file .isar',
+                    onTap: _backupDatabase,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  DsActionTile(
+                    icon: Icons.cloud_download_rounded,
+                    tone: DsTone.success,
+                    title: 'Impor Database',
+                    subtitle: 'Pulihkan data dari file backup',
+                    onTap: _restoreDatabase,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 32),
-            const Divider(),
-            const SizedBox(height: 24),
-            if (!kIsWeb) ...[
-              const SizedBox(height: 16),
-              // Section 2: Backup & Restore
-              Text(
-                'Ekspor & Impor Data (Backup & Restore)',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
+          DsInset(
+            child: Row(
+              children: [
+                Icon(Icons.offline_bolt_rounded, size: 18, color: s.primary),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'UpahKu berjalan 100% offline. Tidak ada data yang dikirim ke internet.',
+                    style: AppTypography.labelMd.copyWith(color: s.onSurfaceVariant),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Semua data disimpan secara lokal. Lakukan backup berkala ke penyimpanan luar atau bagikan file cadangan agar data aman.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                margin: EdgeInsets.zero,
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.cloud_upload_outlined, color: Colors.blue),
-                      title: const Text('Ekspor Database (Backup)'),
-                      subtitle: const Text('Simpan atau kirim file database (.isar)'),
-                      onTap: _backupDatabase,
-                    ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(Icons.cloud_download_outlined, color: Colors.green),
-                      title: const Text('Impor Database (Restore)'),
-                      subtitle: const Text('Pulihkan data dari file database backup'),
-                      onTap: _restoreDatabase,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-  void _saveProfile() {
-    if (!_formKey.currentState!.validate()) return;
-    
-    ref.read(settingsProvider.notifier).saveSettings(
-          namaUsaha: _namaUsahaController.text.trim(),
-          alamatUsaha: _alamatUsahaController.text.trim(),
-        );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profil usaha berhasil disimpan.'),
-        backgroundColor: Colors.green,
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  void _backupDatabase() async {
+  void _saveProfile() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    ref.read(settingsProvider.notifier).saveSettings(
+          namaUsaha: _namaUsaha.text.trim(),
+          alamatUsaha: _alamatUsaha.text.trim(),
+        );
+    _toast('Profil usaha berhasil disimpan.', AppColors.success);
+  }
+
+  void _toast(String message, [Color? bg]) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: bg ?? Theme.of(context).colorScheme.inverseSurface,
+      ),
+    );
+  }
+
+  Future<void> _backupDatabase() async {
+    final Color error = Theme.of(context).colorScheme.error;
     try {
       final isarService = ref.read(isarServiceProvider);
-      // We will backup the database file to the temporary directory
-      final tempDir = await getTemporaryDirectory();
-      final backupPath = await isarService.backupDb(tempDir.path);
-      
-      // Share the file
+      final String tempDir = (await getTemporaryDirectory()).path;
+      final String backupPath = await isarService.backupDb(tempDir);
       await Share.shareXFiles(
-        [XFile(backupPath)],
+        <XFile>[XFile(backupPath)],
         text: 'Backup Database UpahKu',
       );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal melakukan backup: $e')),
-        );
-      }
+      _toast('Gagal melakukan backup: $e', error);
     }
   }
 
-  void _restoreDatabase() async {
+  Future<void> _restoreDatabase() async {
+    final ColorScheme s = Theme.of(context).colorScheme;
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.any, // Isar files are custom format, pick any file
-      );
+      final result = await FilePicker.platform.pickFiles(type: FileType.any);
+      final String? path = result?.files.single.path;
+      if (path == null) return;
 
-      if (result != null && result.files.single.path != null) {
-        final path = result.files.single.path!;
-        
-        if (!path.endsWith('.isar')) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Format berkas tidak valid. Harap pilih berkas .isar.'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-          return;
-        }
+      if (!path.endsWith('.isar')) {
+        _toast('Format berkas tidak valid. Pilih berkas .isar.', s.error);
+        return;
+      }
 
-        // Show confirmation dialog before restoring
-        if (!mounted) return;
-        final confirm = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Pulihkan Data (Restore)?'),
-            content: const Text(
-              'Peringatan: Seluruh data saat ini akan dihapus dan digantikan oleh data dari berkas cadangan ini. Apakah Anda yakin?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Batal'),
+      if (!mounted) return;
+      final bool confirmed = await showDialog<bool>(
+            context: context,
+            builder: (BuildContext ctx) => AlertDialog(
+              title: const Text('Pulihkan Data (Restore)?'),
+              content: const Text(
+                'Seluruh data saat ini akan dihapus dan digantikan oleh data dari '
+                'berkas cadangan ini. Tindakan ini tidak dapat dibatalkan.',
               ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                  foregroundColor: Theme.of(context).colorScheme.onError,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Batal'),
                 ),
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Impor & Ganti'),
-              ),
-            ],
-          ),
-        );
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(ctx).colorScheme.error,
+                    foregroundColor: Theme.of(ctx).colorScheme.onError,
+                  ),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Impor & Ganti'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
 
-        if (confirm == true) {
-          final isarService = ref.read(isarServiceProvider);
-          final success = await isarService.restoreDb(path);
+      if (!confirmed) return;
 
-          if (success && mounted) {
-            // Refresh all providers so the UI is updated immediately
-            ref.invalidate(karyawanProvider);
-            ref.invalidate(penggajianHistoryProvider);
-            ref.invalidate(dashboardProvider);
-            
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Data database berhasil dipulihkan.'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        }
+      final success = await ref.read(isarServiceProvider).restoreDb(path);
+      if (success && mounted) {
+        ref.invalidate(karyawanProvider);
+        ref.invalidate(penggajianHistoryProvider);
+        ref.invalidate(dashboardProvider);
+        _toast('Data database berhasil dipulihkan.', AppColors.success);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memulihkan database: $e')),
-        );
-      }
+      _toast('Gagal memulihkan database: $e', s.error);
     }
   }
 }

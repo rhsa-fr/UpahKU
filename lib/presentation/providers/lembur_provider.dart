@@ -6,7 +6,6 @@ import '../../data/repositories/lembur_repository_impl.dart';
 import '../../data/repositories/mock_repositories.dart';
 import '../../domain/repositories/lembur_repository.dart';
 import 'karyawan_provider.dart';
-import 'absensi_provider.dart';
 import 'dashboard_provider.dart';
 
 final lemburRepositoryProvider = Provider<LemburRepository>((ref) {

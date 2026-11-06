@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ^3.9.0
@@ -77,9 +77,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/images/logo_dark.png"
-  adaptive_icon_background: "#0F1F3D"
-  adaptive_icon_foreground: "assets/images/logo_light.png"
+  image_path: "assets/images/logo_mark.png"
+  adaptive_icon_background: "#101826"
+  adaptive_icon_foreground: "assets/images/logo_foreground.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -94,8 +94,9 @@ flutter:
 
   # Logo and branding assets
   assets:
-    - assets/images/logo_dark.png
-    - assets/images/logo_light.png
+    - assets/images/
+    - assets/google_fonts/
+    - assets/fonts/
 
   # Custom offline fonts
   fonts:
@@ -103,6 +104,22 @@ flutter:
       fonts:
         - asset: assets/google_fonts/Outfit-Regular.ttf
         - asset: assets/google_fonts/Outfit-Bold.ttf
+          weight: 700
+    - family: SpaceGrotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk.ttf
+    - family: IBMPlexSans
+      fonts:
+        - asset: assets/fonts/IBMPlexSans.ttf
+    - family: IBMPlexMono
+      fonts:
+        - asset: assets/fonts/IBMPlexMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/IBMPlexMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexMono-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/IBMPlexMono-Bold.ttf
           weight: 700
 
 

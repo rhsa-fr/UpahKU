@@ -1,368 +1,343 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../providers/dashboard_provider.dart';
+import '../../../core/constants/colors.dart';
+import '../../../core/theme/typography.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../settings/settings_page.dart';
+import '../karyawan/karyawan_list_page.dart';
+import '../riwayat/riwayat_page.dart';
+import '../../widgets/ds/ds_app_header.dart';
+import '../../widgets/ds/design_system.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dashboardState = ref.watch(dashboardProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final AsyncValue<DashboardData> state = ref.watch(dashboardProvider);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                isDark ? 'assets/images/logo_dark.png' : 'assets/images/logo_light.png',
-                height: 32,
-                width: 32,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Text('UpahKu'),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingsPage(),
-                ),
-              );
-            },
-          ),
-        ],
+    return DsPage(
+      header: DsAppHeader(
+        title: 'UpahKu',
+        subtitle: 'Ringkasan Payroll Harian',
+        onAvatarTap: () => _open(context, const SettingsPage()),
       ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.refresh(dashboardProvider.future),
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome Card
-              _buildWelcomeCard(context),
-              const SizedBox(height: 24),
-              // Section Title
-              const Text(
-                'Status Hari Ini',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Stats Grid
-              dashboardState.when(
-                data: (data) => _buildStatsGrid(context, data),
-                loading: () => const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24.0),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-                error: (err, stack) => Center(
-                  child: Text('Gagal memuat statistik: $err'),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Monthly Salary Expense Card
-              dashboardState.maybeWhen(
-                data: (data) => _buildMonthlyExpenseCard(context, data.estimasiGajiBulanIni),
-                orElse: () => const SizedBox.shrink(),
-              ),
-            ],
-          ),
+      refresh: () => ref.refresh(dashboardProvider.future),
+      slivers: [
+        _HeroCard(),
+        _StatusSection(
+          state: state,
+          onRetry: () => ref.invalidate(dashboardProvider),
         ),
-      ),
+        state.maybeWhen(
+          data: (d) => _ExpenseCard(total: d.estimasiGajiBulanIni),
+          orElse: () => const SizedBox.shrink(),
+        ),
+        const _QuickLinks(),
+      ],
     );
   }
 
-  Widget _buildWelcomeCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.primary,
-            Theme.of(context).colorScheme.primary.withRed(30).withBlue(50),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.25),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
+  static void _open(BuildContext context, Widget page) {
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+  }
+}
+
+class _HeroCard extends StatelessWidget {
+  const _HeroCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return DsCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      color: AppColors.panel,
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Selamat Datang!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
+                Text(
+                  'Penggajian Harian',
+                  style: AppTypography.headlineMd.copyWith(color: AppColors.paper),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Catat absensi, hitung lembur, dan terbitkan slip gaji '
+                  'tanpa koneksi internet.',
+                  style: AppTypography.bodyMd.copyWith(
+                    color: AppColors.paper.withValues(alpha: 0.82),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  'Kelola absensi harian dan perhitungan upah karyawan dengan cepat & 100% offline.',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
+                const SizedBox(height: AppSpacing.md),
+                DsPill(
+                  label: '100% Offline • Data tersimpan di HP',
+                  tone: DsTone.secondary,
+                  icon: Icons.offline_bolt_rounded,
+                  dense: true,
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: AppSpacing.md),
           Container(
-            padding: const EdgeInsets.all(12),
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
-              shape: BoxShape.circle,
+              color: AppColors.paper.withValues(alpha: 0.16),
+              borderRadius: AppRadius.rLg,
             ),
-            child: const Icon(
-              Icons.analytics_outlined,
-              color: Colors.white,
-              size: 32,
-            ),
+            child: const Icon(Icons.payments_rounded, size: 28, color: AppColors.paper),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusSection extends StatelessWidget {
+  const _StatusSection({required this.state, required this.onRetry});
+
+  final AsyncValue<DashboardData> state;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const DsSectionHeader(
+          title: 'Status Hari Ini',
+          icon: Icons.insights_rounded,
+          padding: EdgeInsets.zero,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        state.when(
+          data: (d) => _BentoStats(data: d),
+          loading: () => const SizedBox(
+            height: 168,
+            child: DsLoading(label: 'Menghitung statistik...'),
+          ),
+          error: (err, _) => DsErrorView(message: '$err', onRetry: onRetry),
+        ),
+      ],
+    );
+  }
+}
+
+class _BentoStats extends StatelessWidget {
+  const _BentoStats({required this.data});
+
+  final DashboardData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme s = Theme.of(context).colorScheme;
+
+    return DsCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'RINGKASAN HARI INI',
+                  style: AppTypography.labelMd.copyWith(
+                    color: s.onSurfaceVariant,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+              const DsPill(label: 'Harian', tone: DsTone.neutral, icon: Icons.today_rounded, dense: true),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: DsStatTile(
+                  label: 'Total Tim',
+                  value: '${data.totalKaryawanAktif}',
+                  unit: 'Org',
+                  valueColor: s.onSurface,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: DsStatTile(
+                  label: 'Hadir',
+                  value: '${data.hadirHariIni}',
+                  unit: 'Org',
+                  valueColor: AppColors.success,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: DsStatTile(
+                  label: 'Tidak Hadir',
+                  value: '${data.tidakHadirHariIni}',
+                  unit: 'Org',
+                  valueColor: AppColors.danger,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: DsStatTile(
+                  label: 'Total Lembur',
+                  value: data.lemburHariIni.toStringAsFixed(1),
+                  unit: 'Jam',
+                  valueColor: AppColors.warning,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: DsStatTile(
+                  label: 'Rata-rata Upah',
+                  value: _averageWage(data),
+                  valueColor: s.primary,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatsGrid(BuildContext context, DashboardData data) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.35,
+  static String _averageWage(DashboardData d) {
+    if (d.totalKaryawanAktif == 0) return 'Rp 0';
+    final double avg = d.estimasiGajiBulanIni / d.totalKaryawanAktif;
+    return 'Rp ${CurrencyFormatter.compact(avg)}';
+  }
+}
+
+class _ExpenseCard extends StatelessWidget {
+  const _ExpenseCard({required this.total});
+
+  final double total;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme s = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildStatCard(
-          context,
-          title: 'Karyawan Aktif',
-          value: '${data.totalKaryawanAktif}',
-          subtitle: 'Orang',
-          icon: Icons.people_outline,
-          color: Colors.indigo,
+        const DsSectionHeader(
+          title: 'Estimasi Pengeluaran',
+          icon: Icons.account_balance_wallet_rounded,
+          padding: EdgeInsets.zero,
         ),
-        _buildStatCard(
-          context,
-          title: 'Hadir Hari Ini',
-          value: '${data.hadirHariIni}',
-          subtitle: 'Orang',
-          icon: Icons.check_circle_outline,
-          color: Colors.green,
-        ),
-        _buildStatCard(
-          context,
-          title: 'Absen Hari Ini',
-          value: '${data.tidakHadirHariIni}',
-          subtitle: 'Orang',
-          icon: Icons.cancel_outlined,
-          color: Colors.red,
-        ),
-        _buildStatCard(
-          context,
-          title: 'Lembur Hari Ini',
-          value: '${data.lemburHariIni.toStringAsFixed(1)}',
-          subtitle: 'Jam',
-          icon: Icons.schedule_outlined,
-          color: Colors.amber[700]!,
+        const SizedBox(height: AppSpacing.sm),
+        DsCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: s.secondaryContainer,
+                      borderRadius: AppRadius.rMd,
+                    ),
+                    child: Icon(Icons.savings_rounded, color: s.onSecondaryContainer),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Total gaji bulan berjalan',
+                          style: AppTypography.labelMd.copyWith(color: s.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 2),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            CurrencyFormatter.format(total),
+                            style: AppTypography.currencyDisplay.copyWith(
+                              color: s.primary,
+                              fontFeatures: AppTypography.tabular,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildStatCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Card(
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4),
-          width: 1.2,
-        ),
-      ),
-      elevation: 0,
-      color: Theme.of(context).colorScheme.surface,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [
-              Theme.of(context).colorScheme.surface,
-              Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.12),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.8),
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: color, size: 18),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              textBaseline: TextBaseline.alphabetic,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+class _QuickLinks extends StatelessWidget {
+  const _QuickLinks();
 
-  Widget _buildMonthlyExpenseCard(BuildContext context, double totalBulanIni) {
-    return Card(
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4),
-          width: 1.2,
-        ),
+  @override
+  Widget build(BuildContext context) {
+    final List<({IconData icon, String label, Widget page})> links = [
+      (
+        icon: Icons.badge_rounded,
+        label: 'Karyawan',
+        page: const KaryawanListPage(),
       ),
-      elevation: 0,
-      color: Theme.of(context).colorScheme.surface,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [
-              Theme.of(context).colorScheme.surface,
-              Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.12),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.secondary.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(16),
+      (
+        icon: Icons.receipt_long_rounded,
+        label: 'Riwayat Gaji',
+        page: const RiwayatPage(),
+      ),
+      (
+        icon: Icons.settings_rounded,
+        label: 'Pengaturan',
+        page: const SettingsPage(),
+      ),
+    ];
+
+    return Row(
+      children: [
+        for (int i = 0; i < links.length; i++) ...[
+          if (i > 0) const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: DsCard(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => links[i].page),
               ),
-              child: Icon(
-                Icons.payments_outlined,
-                color: Theme.of(context).colorScheme.secondary,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Icon(links[i].icon, size: 22, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(height: 6),
                   Text(
-                    'Estimasi Pengeluaran Gaji Bulan Ini',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.8),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    CurrencyFormatter.format(totalBulanIni),
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+                    links[i].label,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.labelMd.copyWith(
                       color: Theme.of(context).colorScheme.onSurface,
-                      letterSpacing: -0.5,
                     ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        ],
+      ],
     );
   }
 }
+

@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import '../../data/models/penggajian_model.dart';
@@ -111,13 +111,13 @@ final hitungGajiProvider = FutureProvider.family<List<PenggajianModel>, ({DateTi
           .tanggalBetween(startOnly, endOnly)
           .findAll();
 
-      lemburList = await isar!.lemburModels
+      lemburList = await isar.lemburModels
           .filter()
           .karyawan((q) => q.idEqualTo(employee.id))
           .tanggalBetween(startOnly, endOnly)
           .findAll();
 
-      transactionsList = await isar!.transaksiTambahanModels
+      transactionsList = await isar.transaksiTambahanModels
           .filter()
           .karyawan((q) => q.idEqualTo(employee.id))
           .tanggalBetween(startOnly, endOnly)
@@ -134,10 +134,15 @@ final hitungGajiProvider = FutureProvider.family<List<PenggajianModel>, ({DateTi
     int totalAlfa = 0;
 
     for (var a in attendanceList) {
-      if (a.status == 'Hadir') totalHadir++;
-      else if (a.status == 'Izin') totalIzin++;
-      else if (a.status == 'Sakit') totalSakit++;
-      else if (a.status == 'Alfa') totalAlfa++;
+      if (a.status == 'Hadir') {
+        totalHadir++;
+      } else if (a.status == 'Izin') {
+        totalIzin++;
+      } else if (a.status == 'Sakit') {
+        totalSakit++;
+      } else if (a.status == 'Alfa') {
+        totalAlfa++;
+      }
     }
 
     double totalJamLembur = 0.0;
@@ -191,3 +196,6 @@ final hitungGajiProvider = FutureProvider.family<List<PenggajianModel>, ({DateTi
 
   return results;
 });
+
+
+

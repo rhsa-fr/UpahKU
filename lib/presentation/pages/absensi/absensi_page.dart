@@ -1,11 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
 import '../../providers/absensi_provider.dart';
 import '../../providers/karyawan_provider.dart';
+import '../../providers/lembur_provider.dart';
+import '../../providers/transaksi_tambahan_provider.dart';
+import '../../../core/constants/colors.dart';
+import '../../../core/theme/typography.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/absensi_model.dart';
 import '../../../data/models/karyawan_model.dart';
+import '../../../data/models/lembur_model.dart';
+import '../../../data/models/transaksi_tambahan_model.dart';
+import '../../widgets/ds/design_system.dart';
+import '../../widgets/ds/date_picker_sheet.dart';
 
 class AbsensiPage extends ConsumerStatefulWidget {
   const AbsensiPage({super.key});
@@ -15,173 +26,189 @@ class AbsensiPage extends ConsumerStatefulWidget {
 }
 
 class _AbsensiPageState extends ConsumerState<AbsensiPage> {
+  final TextEditingController _searchCtrl = TextEditingController();
   String _searchQuery = '';
 
   @override
-  Widget build(BuildContext context) {
-    final selectedDate = ref.watch(selectedDateProvider);
-    final absensiState = ref.watch(absensiProvider(selectedDate));
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Column(
-        children: [
-          // Date Selector Header (Premium design)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF0F1F3D).withOpacity(0.4) : Colors.white,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+  @override
+  Widget build(BuildContext context) {
+    final DateTime selectedDate = ref.watch(selectedDateProvider);
+    final AsyncValue<List<AbsensiModel>> state = ref.watch(absensiProvider(selectedDate));
+
+    return Column(
+      children: [
+        _DateBar(date: selectedDate),
+        Expanded(
+          child: state.when(
+            data: (List<AbsensiModel> list) => _buildBody(context, selectedDate, list),
+            loading: () => const DsLoading(label: 'Memuat absensi...'),
+            error: (Object err, StackTrace _) => DsErrorView(
+              message: '$err',
+              onRetry: () => ref.invalidate(absensiProvider(selectedDate)),
             ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Navigation Hari
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.chevron_left_rounded),
-                          onPressed: () {
-                            ref.read(selectedDateProvider.notifier).state =
-                                selectedDate.subtract(const Duration(days: 1));
-                          },
-                        ),
-                        TextButton.icon(
-                          onPressed: () => _selectDate(context, selectedDate),
-                          icon: const Icon(Icons.calendar_month_rounded, color: Color(0xFF10B981)),
-                          label: Text(
-                            DateFormatter.formatFull(selectedDate),
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBody(BuildContext context, DateTime date, List<AbsensiModel> list) {
+    if (list.isEmpty) {
+      return DsEmptyState(
+        icon: Icons.assignment_ind_outlined,
+        title: 'Tidak ada karyawan aktif',
+        subtitle: 'Tambahkan karyawan dulu di tab Karyawan sebelum mencatat absensi.',
+      );
+    }
+
+    final String q = _searchQuery.trim().toLowerCase();
+    final List<AbsensiModel> visible = list.where((AbsensiModel a) {
+      final String name = a.karyawan.value?.nama ?? '';
+      return q.isEmpty || name.toLowerCase().contains(q);
+    }).toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.margin,
+            AppSpacing.md,
+            AppSpacing.margin,
+            AppSpacing.sm,
+          ),
+          child: Column(
+            children: [
+              _SummaryCounters(list: list),
+              const SizedBox(height: AppSpacing.sm),
+              DsSearchField(
+                controller: _searchCtrl,
+                hintText: 'Cari nama karyawan...',
+                onChanged: (String v) => setState(() => _searchQuery = v),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: visible.isEmpty
+              ? const DsEmptyState(
+                  icon: Icons.search_off_rounded,
+                  title: 'Karyawan tidak ditemukan',
+                  subtitle: 'Coba kata kunci lain.',
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.margin,
+                    AppSpacing.sm,
+                    AppSpacing.margin,
+                    AppSpacing.xl,
+                  ),
+                  itemCount: visible.length,
+                  itemBuilder: (BuildContext context, int i) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: _AbsensiCard(absensi: visible[i]),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Date navigation bar
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DateBar extends ConsumerWidget {
+  const _DateBar({required this.date});
+
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme s = Theme.of(context).colorScheme;
+    final bool isToday = DateUtils.isSameDay(date, DateTime.now());
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.sm,
+        AppSpacing.sm,
+        AppSpacing.margin,
+        AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: s.surface,
+        border: Border(bottom: BorderSide(color: s.outlineVariant)),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left_rounded),
+            onPressed: () => ref
+                .read(selectedDateProvider.notifier)
+                .state = date.subtract(const Duration(days: 1)),
+          ),
+          Expanded(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: AppRadius.rMd,
+                onTap: () => _pickDate(context, ref),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.calendar_month_rounded, size: 16, color: s.primary),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              DateFormat('EEE, d MMM', 'id_ID').format(date),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.titleMd.copyWith(
+                                color: s.onSurface,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.chevron_right_rounded),
-                          onPressed: () {
-                            ref.read(selectedDateProvider.notifier).state =
-                                selectedDate.add(const Duration(days: 1));
-                          },
-                        ),
-                      ],
-                    ),
-                    // Tombol Absen Massal
-                    TextButton.icon(
-                      onPressed: () => _showBulkAbsensiSheet(context),
-                      icon: const Icon(Icons.flash_on_rounded, size: 16),
-                      label: const Text(
-                        'Absen Massal',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ],
                       ),
-                      style: TextButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981).withOpacity(0.15),
-                        foregroundColor: const Color(0xFF10B981),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      const SizedBox(height: 2),
+                      DsPill(
+                        label: isToday ? 'HARI INI' : DateFormatter.formatShort(date),
+                        tone: isToday ? DsTone.secondary : DsTone.neutral,
+                        dense: true,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.check_circle_outline_rounded, size: 14, color: Colors.green.shade600),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Tersimpan otomatis • Bebas ubah kapan saja',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? Colors.green.shade400 : Colors.green.shade700,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Search Field
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Cari nama karyawan...',
-                prefixIcon: const Icon(Icons.search_rounded),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                filled: true,
-                fillColor: isDark ? const Color(0xFF162235).withOpacity(0.6) : Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+                    ],
+                  ),
                 ),
               ),
-              onChanged: (val) {
-                setState(() {
-                  _searchQuery = val;
-                });
-              },
             ),
           ),
-          // Attendance List
-          Expanded(
-            child: absensiState.when(
-              data: (list) {
-                final filteredList = list.where((a) {
-                  final name = a.karyawan.value?.nama ?? '';
-                  return name.toLowerCase().contains(_searchQuery.toLowerCase());
-                }).toList();
-
-                if (filteredList.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.assignment_ind_outlined,
-                          size: 64,
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Tidak ada karyawan aktif untuk diabsen.',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  itemCount: filteredList.length,
-                  itemBuilder: (context, index) {
-                    final absensi = filteredList[index];
-                    return _buildAbsensiCard(context, absensi);
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(
-                child: Text('Gagal memuat absensi: $err'),
-              ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right_rounded),
+            onPressed: () => ref
+                .read(selectedDateProvider.notifier)
+                .state = date.add(const Duration(days: 1)),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          FilledButton.tonalIcon(
+            onPressed: () => _DateBar.showBulkSheet(context),
+            icon: const Icon(Icons.bolt_rounded, size: 16),
+            label: const Text('Massal'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, 38),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              backgroundColor: s.secondaryContainer,
+              foregroundColor: s.onSecondaryContainer,
+              textStyle: AppTypography.labelMd,
             ),
           ),
         ],
@@ -189,540 +216,690 @@ class _AbsensiPageState extends ConsumerState<AbsensiPage> {
     );
   }
 
-  Widget _buildAbsensiCard(BuildContext context, AbsensiModel absensi) {
-    final karyawan = absensi.karyawan.value;
-    if (karyawan == null) return const SizedBox.shrink();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Future<void> _pickDate(BuildContext context, WidgetRef ref) async {
+    final DateTime? picked = await showUpahDatePicker(
+      context,
+      initialDate: date,
+      firstDate: DateTime(2025),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+      title: 'Tanggal absensi',
+      subtitle: 'Pilih hari yang mau dicatat',
+    );
+    if (picked != null) ref.read(selectedDateProvider.notifier).state = picked;
+  }
 
-    final nameParts = karyawan.nama.trim().split(' ');
-    final initials = nameParts.length > 1
-        ? '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase()
-        : nameParts[0][0].toUpperCase();
+  static Future<void> showBulkSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+      builder: (BuildContext _) => const _BulkAbsensiSheet(),
+    );
+  }
+}
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF162235) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+// ─────────────────────────────────────────────────────────────────────────────
+// Summary counters
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SummaryCounters extends StatelessWidget {
+  const _SummaryCounters({required this.list});
+
+  final List<AbsensiModel> list;
+
+  static const List<({String label, DsTone tone, IconData? icon})> _tones = [
+    (label: 'Hadir', tone: DsTone.success, icon: Icons.check_circle_rounded),
+    (label: 'Izin', tone: DsTone.info, icon: Icons.event_available_rounded),
+    (label: 'Sakit', tone: DsTone.warning, icon: Icons.healing_rounded),
+    (label: 'Alpa', tone: DsTone.danger, icon: Icons.cancel_rounded),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final Map<String, int> counts = {'Hadir': 0, 'Izin': 0, 'Sakit': 0, 'Alpa': 0};
+    for (final AbsensiModel a in list) {
+      counts[a.status] = (counts[a.status] ?? 0) + 1;
+    }
+
+    return Row(
+      children: [
+        for (int i = 0; i < _tones.length; i++) ...[
+          if (i > 0) const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: DsCounterChip(
+              label: _tones[i].label,
+              value: counts[_tones[i].label] ?? 0,
+              tone: _tones[i].tone,
+              icon: _tones[i].icon,
+            ),
           ),
         ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14.0),
-        child: Row(
-          children: [
-            // Profil Avatar Karyawan
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0F1F3D), Color(0xFF10B981)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Worker card
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _AbsensiCard extends ConsumerWidget {
+  const _AbsensiCard({required this.absensi});
+
+  final AbsensiModel absensi;
+
+  static const List<({String label, IconData icon, DsTone tone})> _statuses = [
+    (label: 'Hadir', icon: Icons.check_rounded, tone: DsTone.success),
+    (label: 'Izin', icon: Icons.assignment_turned_in_outlined, tone: DsTone.info),
+    (label: 'Sakit', icon: Icons.healing_rounded, tone: DsTone.warning),
+    (label: 'Alpa', icon: Icons.close_rounded, tone: DsTone.danger),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme s = Theme.of(context).colorScheme;
+    final KaryawanModel? k = absensi.karyawan.value;
+    if (k == null) return const SizedBox.shrink();
+
+    final DateTime date = ref.watch(selectedDateProvider);
+    final bool canOvertime = absensi.status == 'Hadir';
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              DsAvatar(initials: initialsOf(k.nama), size: 40),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      k.nama,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.titleMd.copyWith(
+                        color: s.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Harian: ${CurrencyFormatter.format(k.upahHarian)} • '
+                      'Lembur: ${CurrencyFormatter.compact(k.tarifLembur)}/jam',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.labelMd.copyWith(color: s.onSurfaceVariant),
+                    ),
+                  ],
                 ),
-                borderRadius: BorderRadius.circular(12),
               ),
-              alignment: Alignment.center,
-              child: Text(
-                initials,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              for (int i = 0; i < _statuses.length; i++) ...[
+                if (i > 0) const SizedBox(width: 6),
+                Expanded(
+                  child: _StatusToggle(
+                    absensi: absensi,
+                    date: date,
+                    spec: _statuses[i],
+                    selected: absensi.status == _statuses[i].label,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (canOvertime)
+            _OvertimeRow(karyawanId: k.id, date: date, tarifLembur: k.tarifLembur)
+          else
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.md),
+              child: DsInset(
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded, size: 16, color: s.outline),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Lembur dinonaktifkan • status ${absensi.status}',
+                        style: AppTypography.labelMd.copyWith(color: s.outline),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(width: 14),
-            // Info Karyawan
+          _EstimateRow(karyawan: k, date: date, status: absensi.status),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusToggle extends ConsumerWidget {
+  const _StatusToggle({
+    required this.absensi,
+    required this.date,
+    required this.spec,
+    required this.selected,
+  });
+
+  final AbsensiModel absensi;
+  final DateTime date;
+  final ({IconData icon, DsTone tone, String label}) spec;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme s = Theme.of(context).colorScheme;
+    final Color accent = spec.tone.accent(s);
+    final Color bg = selected ? spec.tone.bg(s) : s.surfaceContainerHigh;
+    final Color fg = selected ? spec.tone.fg(s) : s.outline;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: spec.label,
+      child: Material(
+        color: bg,
+        borderRadius: AppRadius.rMd,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            ref
+                .read(absensiProvider(date).notifier)
+                .updateStatus(absensi.karyawan.value!.id, spec.label);
+          },
+          borderRadius: AppRadius.rMd,
+          child: Container(
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              borderRadius: AppRadius.rMd,
+              border: Border.all(
+                color: selected ? accent : Colors.transparent,
+                width: 1.4,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(spec.icon, size: 15, color: fg),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    spec.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.labelMd.copyWith(
+                      color: fg,
+                      fontSize: 11,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OvertimeRow extends ConsumerWidget {
+  const _OvertimeRow({
+    required this.karyawanId,
+    required this.date,
+    required this.tarifLembur,
+  });
+
+  final int karyawanId;
+  final DateTime date;
+  final double tarifLembur;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme s = Theme.of(context).colorScheme;
+    final List<LemburModel> lemburList =
+        ref.watch(lemburProvider(date)).valueOrNull ?? const <LemburModel>[];
+    final double jam = lemburList
+        .where((LemburModel l) => l.karyawan.value?.id == karyawanId)
+        .fold<double>(0.0, (double sum, LemburModel l) => sum + l.jumlahJam);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.md),
+      child: DsInset(
+        child: Row(
+          children: [
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    karyawan.nama,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
+                    'Lembur Harian',
+                    style: AppTypography.labelMd.copyWith(color: s.onSurfaceVariant),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    karyawan.jabatan,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.outline,
-                      fontSize: 12,
-                    ),
+                    'Kelipatan 0,5 jam (+${CurrencyFormatter.format(jam * tarifLembur)})',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.labelMd.copyWith(color: s.outline, fontSize: 11),
                   ),
                 ],
               ),
             ),
-            // Status Switchers (Ikon Premium)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildStatusButton(context, absensi, 'Hadir', Icons.check_circle_rounded, Colors.green),
-                const SizedBox(width: 5),
-                _buildStatusButton(context, absensi, 'Izin', Icons.assignment_rounded, Colors.blue),
-                const SizedBox(width: 5),
-                _buildStatusButton(context, absensi, 'Sakit', Icons.local_hospital_rounded, Colors.orange),
-                const SizedBox(width: 5),
-                _buildStatusButton(context, absensi, 'Alfa', Icons.cancel_rounded, Colors.red),
-              ],
+            DsStepper(
+              value: jam,
+              onChanged: (double v) =>
+                  ref.read(lemburProvider(date).notifier).updateHours(karyawanId, v),
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildStatusButton(
-    BuildContext context,
-    AbsensiModel absensi,
-    String status,
-    IconData icon,
-    Color activeColor,
-  ) {
-    final isSelected = absensi.status == status;
-    final selectedDate = ref.read(selectedDateProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+class _EstimateRow extends ConsumerWidget {
+  const _EstimateRow({
+    required this.karyawan,
+    required this.date,
+    required this.status,
+  });
 
-    return Tooltip(
-      message: status,
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.lightImpact();
-          ref
-              .read(absensiProvider(selectedDate).notifier)
-              .updateStatus(absensi.karyawan.value!.id, status);
-        },
-        borderRadius: BorderRadius.circular(10),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: isSelected 
-                ? activeColor.withOpacity(isDark ? 0.25 : 0.15) 
-                : (isDark ? const Color(0xFF1E2D4A) : Colors.grey.shade100),
-            border: Border.all(
-              color: isSelected ? activeColor : Colors.transparent,
-              width: 1.5,
+  final KaryawanModel karyawan;
+  final DateTime date;
+  final String status;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme s = Theme.of(context).colorScheme;
+
+    final List<LemburModel> lemburList =
+        ref.watch(lemburProvider(date)).valueOrNull ?? const <LemburModel>[];
+    final List<TransaksiTambahanModel> transaksiList =
+        ref.watch(transaksiTambahanProvider(date)).valueOrNull ??
+            const <TransaksiTambahanModel>[];
+
+    double lemburJam = 0;
+    double bonus = 0;
+    double potongan = 0;
+
+    for (final LemburModel l in lemburList) {
+      if (l.karyawan.value?.id == karyawan.id) lemburJam += l.jumlahJam;
+    }
+    for (final TransaksiTambahanModel t in transaksiList) {
+      if (t.karyawan.value?.id != karyawan.id) continue;
+      if (t.tipe == 'Bonus') {
+        bonus += t.nominal;
+      } else {
+        potongan += t.nominal;
+      }
+    }
+
+    final double total = status == 'Hadir'
+        ? karyawan.upahHarian + lemburJam * karyawan.tarifLembur + bonus - potongan
+        : bonus - potongan;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Row(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                const DsPill(label: '+ Bonus', tone: DsTone.success, dense: true),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: DsPill(
+                    label: '- Potongan',
+                    tone: potongan > 0 ? DsTone.danger : DsTone.neutral,
+                    dense: true,
+                  ),
+                ),
+              ],
             ),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: isSelected ? [
-              BoxShadow(
-                color: activeColor.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ] : null,
           ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: isSelected 
-                ? activeColor 
-                : (isDark ? Colors.white38 : Colors.grey.shade400),
+          const SizedBox(width: AppSpacing.sm),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Estimasi hari ini',
+                style: AppTypography.labelMd.copyWith(color: s.outline, fontSize: 11),
+              ),
+              Text(
+                CurrencyFormatter.format(total),
+                style: AppTypography.titleMd.copyWith(
+                  color: s.primary,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: AppTypography.tabular,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bulk sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _BulkAbsensiSheet extends ConsumerStatefulWidget {
+  const _BulkAbsensiSheet();
+
+  @override
+  ConsumerState<_BulkAbsensiSheet> createState() => _BulkAbsensiSheetState();
+}
+
+class _BulkAbsensiSheetState extends ConsumerState<_BulkAbsensiSheet> {
+  DateTime _start = DateTime.now();
+  DateTime _end = DateTime.now();
+  String _status = 'Hadir';
+  final Set<int> _selected = <int>{};
+  String _query = '';
+  bool _initialised = false;
+
+  static const List<({String label, IconData icon, DsTone tone})> _statuses = [
+    (label: 'Hadir', icon: Icons.check_rounded, tone: DsTone.success),
+    (label: 'Izin', icon: Icons.assignment_turned_in_outlined, tone: DsTone.info),
+    (label: 'Sakit', icon: Icons.healing_rounded, tone: DsTone.warning),
+    (label: 'Alpa', icon: Icons.close_rounded, tone: DsTone.danger),
+  ];
+
+  List<KaryawanModel> _active() {
+    return ref.read(karyawanProvider).maybeWhen(
+          data: (List<KaryawanModel> l) => l.where((KaryawanModel k) => k.statusAktif).toList(),
+          orElse: () => <KaryawanModel>[],
+        );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme s = Theme.of(context).colorScheme;
+    final List<KaryawanModel> all = _active();
+    if (!_initialised && all.isNotEmpty) {
+      _initialised = true;
+      _selected.addAll(all.map((KaryawanModel k) => k.id));
+    }
+    final String q = _query.trim().toLowerCase();
+    final List<KaryawanModel> visible = all
+        .where((KaryawanModel k) => q.isEmpty || k.nama.toLowerCase().contains(q))
+        .toList();
+    final int days = _end.difference(_start).inDays + 1;
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  0,
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                ),
+                child: Text(
+                  'Absensi Massal',
+                  style: AppTypography.headlineMd.copyWith(color: s.onSurface),
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  children: [
+                    DsInset(
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_month_rounded, size: 18, color: s.primary),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              '${DateFormatter.formatShort(_start)}  s/d  ${DateFormatter.formatShort(_end)}',
+                              style: AppTypography.titleMd.copyWith(color: s.onSurface),
+                            ),
+                          ),
+                          DsPill(label: '$days Hari', tone: DsTone.secondary),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    OutlinedButton.icon(
+                      onPressed: () => _pickRange(context),
+                      icon: const Icon(Icons.date_range_rounded, size: 18),
+                      label: const Text('Ubah rentang tanggal'),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      'STATUS KEHADIRAN',
+                      style: AppTypography.labelMd.copyWith(
+                        color: s.onSurfaceVariant,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        for (int i = 0; i < _statuses.length; i++) ...[
+                          if (i > 0) const SizedBox(width: 6),
+                          Expanded(
+                            child: _BulkStatusOption(
+                              spec: _statuses[i],
+                              selected: _status == _statuses[i].label,
+                              onTap: () => setState(() => _status = _statuses[i].label),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'KARYAWAN TERPILIH (${_selected.length})',
+                            style: AppTypography.labelMd.copyWith(
+                              color: s.onSurfaceVariant,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: all.isEmpty
+                              ? null
+                              : () => setState(() {
+                                    if (_selected.length == all.length) {
+                                      _selected.clear();
+                                    } else {
+                                      _selected
+                                        ..clear()
+                                        ..addAll(all.map((KaryawanModel k) => k.id));
+                                    }
+                                  }),
+                          child: Text(_selected.length == all.length ? 'Batal Semua' : 'Pilih Semua'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    SizedBox(
+                      height: 48,
+                      child: TextField(
+                        onChanged: (String v) => setState(() => _query = v),
+                        decoration: const InputDecoration(
+                          hintText: 'Cari karyawan...',
+                          prefixIcon: Icon(Icons.search_rounded, size: 20),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    if (visible.isEmpty)
+                      const DsEmptyState(
+                        icon: Icons.person_off_rounded,
+                        title: 'Tidak ada karyawan',
+                      )
+                    else
+                      ...visible.map((KaryawanModel k) {
+                        final bool on = _selected.contains(k.id);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: DsInset(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: 6,
+                            ),
+                            child: Row(
+                              children: [
+                                Checkbox(
+                                  value: on,
+                                  onChanged: (bool? v) => setState(() {
+                                    if (v ?? false) {
+                                      _selected.add(k.id);
+                                    } else {
+                                      _selected.remove(k.id);
+                                    }
+                                  }),
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        k.nama,
+                                        style: AppTypography.bodyMd.copyWith(
+                                          color: s.onSurface,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Text(
+                                        k.jabatan,
+                                        style: AppTypography.labelMd.copyWith(color: s.outline),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: FilledButton.icon(
+                  onPressed: _selected.isEmpty ? null : () => _apply(days),
+                  icon: const Icon(Icons.check_rounded, size: 18),
+                  label: Text('Terapkan $_status ke $days hari'),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Future<void> _selectDate(BuildContext context, DateTime currentDate) async {
-    final DateTime? picked = await showDatePicker(
+  Future<void> _pickRange(BuildContext context) async {
+    final DateTimeRange? range = await showDateRangePicker(
       context: context,
-      initialDate: currentDate,
       firstDate: DateTime(2025),
       lastDate: DateTime.now().add(const Duration(days: 30)),
+      initialDateRange: DateTimeRange(start: _start, end: _end),
     );
-    if (picked != null && picked != currentDate) {
-      ref.read(selectedDateProvider.notifier).state = picked;
+    if (range != null) {
+      setState(() {
+        _start = range.start;
+        _end = range.end;
+      });
     }
   }
 
-  // Menampilkan Bottom Sheet Premium untuk Input Absensi Massal (Bulk Input)
-  void _showBulkAbsensiSheet(BuildContext context) {
-    final karyawanState = ref.read(karyawanProvider);
-    final activeEmployees = karyawanState.maybeWhen(
-      data: (list) => list.where((k) => k.statusAktif).toList(),
-      orElse: () => <KaryawanModel>[],
-    );
+  Future<void> _apply(int days) async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final NavigatorState navigator = Navigator.of(context);
+    final Color error = Theme.of(context).colorScheme.error;
+    final Color success = AppColors.success;
 
-    if (activeEmployees.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tidak ada karyawan aktif untuk diabsen.'),
-          backgroundColor: Colors.orange,
+    try {
+      await ref.read(absensiProvider(_end).notifier).saveBulkAbsensi(
+            karyawanIds: _selected.toList(),
+            startDate: _start,
+            endDate: _end,
+            status: _status,
+          );
+      navigator.pop();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Berhasil menyimpan $_status massal ($days hari).'),
+          backgroundColor: success,
         ),
       );
-      return;
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Gagal menyimpan: $e'), backgroundColor: error),
+      );
     }
-
-    DateTime _startDate = DateTime.now();
-    DateTime _endDate = DateTime.now();
-    String _selectedStatus = 'Hadir';
-    List<int> _selectedKaryawanIds = activeEmployees.map((k) => k.id).toList();
-    String _sheetSearchQuery = '';
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final isDark = Theme.of(context).brightness == Brightness.dark;
-            
-            final filteredEmployees = activeEmployees.where((k) {
-              return k.nama.toLowerCase().contains(_sheetSearchQuery.toLowerCase());
-            }).toList();
-
-            final daysCount = _endDate.difference(_startDate).inDays + 1;
-
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.85,
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F1F3D) : Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(28),
-                  topRight: Radius.circular(28),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Handle Bar
-                  Center(
-                    child: Container(
-                      width: 48,
-                      height: 5,
-                      margin: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white24 : Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                  // Judul Sheet
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    child: Text(
-                      'Input Absensi Massal',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const Divider(),
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      children: [
-                        const SizedBox(height: 12),
-                        // 1. Pemilih Rentang Tanggal
-                        const Text(
-                          '1. Rentang Tanggal',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        const SizedBox(height: 8),
-                        InkWell(
-                          onTap: () async {
-                            final pickedRange = await showDateRangePicker(
-                              context: context,
-                              firstDate: DateTime(2025),
-                              lastDate: DateTime.now().add(const Duration(days: 30)),
-                              initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
-                            );
-                            if (pickedRange != null) {
-                              setSheetState(() {
-                                _startDate = pickedRange.start;
-                                _endDate = pickedRange.end;
-                              });
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(14),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF162235) : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: isDark ? Colors.white10 : Colors.grey.shade300,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(Icons.calendar_month_rounded, color: Color(0xFF10B981)),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      '${DateFormatter.formatShort(_startDate)}  s/d  ${DateFormatter.formatShort(_endDate)}',
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
-                                    ),
-                                  ],
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF10B981).withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    '$daysCount Hari',
-                                    style: const TextStyle(
-                                      color: Color(0xFF10B981),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        // 2. Status Kehadiran
-                        const Text(
-                          '2. Status Kehadiran',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            _buildBulkStatusOption(context, setSheetState, 'Hadir', Icons.check_circle_rounded, Colors.green, _selectedStatus, (val) {
-                              setSheetState(() => _selectedStatus = val);
-                            }),
-                            const SizedBox(width: 8),
-                            _buildBulkStatusOption(context, setSheetState, 'Izin', Icons.assignment_rounded, Colors.blue, _selectedStatus, (val) {
-                              setSheetState(() => _selectedStatus = val);
-                            }),
-                            const SizedBox(width: 8),
-                            _buildBulkStatusOption(context, setSheetState, 'Sakit', Icons.local_hospital_rounded, Colors.orange, _selectedStatus, (val) {
-                              setSheetState(() => _selectedStatus = val);
-                            }),
-                            const SizedBox(width: 8),
-                            _buildBulkStatusOption(context, setSheetState, 'Alfa', Icons.cancel_rounded, Colors.red, _selectedStatus, (val) {
-                              setSheetState(() => _selectedStatus = val);
-                            }),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        // 3. Pemilih Karyawan
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '3. Karyawan Terpilih (${_selectedKaryawanIds.length})',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                setSheetState(() {
-                                  if (_selectedKaryawanIds.length == activeEmployees.length) {
-                                    _selectedKaryawanIds.clear();
-                                  } else {
-                                    _selectedKaryawanIds = activeEmployees.map((k) => k.id).toList();
-                                  }
-                                });
-                              },
-                              child: Text(
-                                _selectedKaryawanIds.length == activeEmployees.length
-                                    ? 'Batal Semua'
-                                    : 'Pilih Semua',
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        // Pencarian Karyawan Di Dalam Sheet
-                        TextField(
-                          decoration: InputDecoration(
-                            hintText: 'Cari karyawan...',
-                            prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                            contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                            filled: true,
-                            fillColor: isDark ? const Color(0xFF162235) : Colors.grey.shade100,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          onChanged: (val) {
-                            setSheetState(() {
-                              _sheetSearchQuery = val;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 200,
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: isDark ? Colors.white10 : Colors.grey.shade200,
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: ListView.builder(
-                            itemCount: filteredEmployees.length,
-                            itemBuilder: (context, index) {
-                              final karyawan = filteredEmployees[index];
-                              final isSelected = _selectedKaryawanIds.contains(karyawan.id);
-
-                              return CheckboxListTile(
-                                activeColor: const Color(0xFF10B981),
-                                title: Text(
-                                  karyawan.nama,
-                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                                ),
-                                subtitle: Text(
-                                  karyawan.jabatan,
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                                value: isSelected,
-                                onChanged: (val) {
-                                  setSheetState(() {
-                                    if (val == true) {
-                                      _selectedKaryawanIds.add(karyawan.id);
-                                    } else {
-                                      _selectedKaryawanIds.remove(karyawan.id);
-                                    }
-                                  });
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
-                  ),
-                  // Tombol Terapkan di Bagian Bawah
-                  Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _selectedKaryawanIds.isEmpty
-                            ? null
-                            : () async {
-                                final selectedDate = ref.read(selectedDateProvider);
-                                final notifier = ref.read(absensiProvider(selectedDate).notifier);
-                                
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (_) => const Center(child: CircularProgressIndicator()),
-                                );
-
-                                try {
-                                  await notifier.saveBulkAbsensi(
-                                    karyawanIds: _selectedKaryawanIds,
-                                    startDate: _startDate,
-                                    endDate: _endDate,
-                                    status: _selectedStatus,
-                                  );
-                                  
-                                  Navigator.pop(context); // Close loading dialog
-                                  Navigator.pop(context); // Close bottom sheet
-                                  
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Berhasil menyimpan $_selectedStatus massal ($daysCount hari).'),
-                                      backgroundColor: const Color(0xFF10B981),
-                                    ),
-                                  );
-                                } catch (e) {
-                                  Navigator.pop(context); // Close loading dialog
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Gagal menyimpan: $e'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Terapkan Absensi',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
   }
+}
 
-  Widget _buildBulkStatusOption(
-    BuildContext context,
-    StateSetter setSheetState,
-    String status,
-    IconData icon,
-    Color color,
-    String selectedStatus,
-    void Function(String) onTap,
-  ) {
-    final isSelected = selectedStatus == status;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+class _BulkStatusOption extends StatelessWidget {
+  const _BulkStatusOption({required this.spec, required this.selected, required this.onTap});
 
-    return Expanded(
+  final ({IconData icon, DsTone tone, String label}) spec;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme s = Theme.of(context).colorScheme;
+    return Material(
+      color: selected ? spec.tone.bg(s) : s.surfaceContainerHigh,
+      borderRadius: AppRadius.rMd,
       child: InkWell(
-        onTap: () => onTap(status),
-        borderRadius: BorderRadius.circular(12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+        onTap: onTap,
+        borderRadius: AppRadius.rMd,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm + 2),
           decoration: BoxDecoration(
-            color: isSelected 
-                ? color.withOpacity(isDark ? 0.25 : 0.15) 
-                : (isDark ? const Color(0xFF162235) : Colors.grey.shade100),
+            borderRadius: AppRadius.rMd,
             border: Border.all(
-              color: isSelected ? color : (isDark ? Colors.white10 : Colors.grey.shade300),
-              width: 1.5,
+              color: selected ? spec.tone.accent(s) : Colors.transparent,
+              width: 1.4,
             ),
-            borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                icon,
-                color: isSelected ? color : (isDark ? Colors.white30 : Colors.grey.shade400),
-                size: 20,
+                spec.icon,
+                size: 18,
+                color: selected ? spec.tone.fg(s) : s.outline,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
-                status,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected 
-                      ? color 
-                      : (isDark ? Colors.white70 : Colors.grey.shade700),
+                spec.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.labelMd.copyWith(
+                  color: selected ? spec.tone.fg(s) : s.outline,
+                  fontSize: 11,
                 ),
               ),
             ],

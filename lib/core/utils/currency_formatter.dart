@@ -11,6 +11,30 @@ class CurrencyFormatter {
   static String format(double value) {
     return _rupiahFormat.format(value);
   }
+
+  /// Short form used inside tight stat tiles, e.g. 112500 -> "112,5rb".
+  static String compact(double value) {
+    final double abs = value.abs();
+    if (abs >= 1000000000) {
+      return '${_trim(value / 1000000000)}M';
+    }
+    if (abs >= 1000000) {
+      return '${_trim(value / 1000000)}jt';
+    }
+    if (abs >= 1000) {
+      return '${_trim(value / 1000)}rb';
+    }
+    return value.toStringAsFixed(0);
+  }
+
+  /// Rupiah without the symbol, e.g. 120000 -> "120.000".
+  static String plain(double value) =>
+      NumberFormat('#,###', 'id_ID').format(value);
+
+  static String _trim(double value) {
+    final String s = value.toStringAsFixed(1);
+    return s.endsWith('.0') ? s.substring(0, s.length - 2) : s.replaceAll('.', ',');
+  }
 }
 
 class RupiahInputFormatter extends TextInputFormatter {
