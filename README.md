@@ -279,6 +279,9 @@ flutter test
 
 ## Pembaruan terbaru
 
+- **v1.1.1** — perbaikan database: instance Isar "zombie" (terdaftar tapi koleksi gagal
+  di-attach) tidak lagi dipakai ulang, sehingga error `LateInitializationError` hilang dan
+  tombol "Coba lagi" benar-benar memulihkan. Service database kini singleton.
 - Design system **Ledger Lapangan**: ink/paper/amber, kartu border 1px, tombol pill.
 - Font baru dibundel offline: **Space Grotesk, IBM Plex Sans, IBM Plex Mono**.
 - Logo baru: mark ink + amber check, varian light/dark, adaptive icon, favicon.
@@ -303,27 +306,27 @@ MIT — lihat [LICENSE](LICENSE).
 ## Unduh
 
 <p align="center">
-  <a href="https://github.com/rhsa-fr/UpahKU/releases/download/v1.1.0/upahku-v1.1.0-arm64-v8a.apk">
-    <strong>Unduh UpahKu v1.1.0 — APK 24,4 MB (arm64)</strong>
+  <a href="https://github.com/rhsa-fr/UpahKU/releases/download/v1.1.1/upahku-v1.1.1-arm64-v8a.apk">
+    <strong>Unduh UpahKu v1.1.1 — APK 24,4 MB (arm64)</strong>
   </a><br/>
-  <sub>atau <a href="https://github.com/rhsa-fr/UpahKU/releases/download/v1.1.0/upahku-v1.1.0-universal.apk">versi universal 62,6 MB</a> untuk HP lama/emulator</sub>
+  <sub>atau <a href="https://github.com/rhsa-fr/UpahKU/releases/download/v1.1.1/upahku-v1.1.1-universal.apk">versi universal 62,6 MB</a> untuk HP lama/emulator</sub>
 </p>
 
 | File | Ukuran | Untuk |
 |---|---|---|
-| `upahku-v1.1.0-arm64-v8a.apk` | 24,4 MB | **Disarankan** — HP Android modern |
-| `upahku-v1.1.0-universal.apk` | 62,6 MB | HP 32-bit lama, emulator |
+| `upahku-v1.1.1-arm64-v8a.apk` | 24,4 MB | **Disarankan** — HP Android modern |
+| `upahku-v1.1.1-universal.apk` | 62,6 MB | HP 32-bit lama, emulator |
 
-- Minimal **Android 7.0 (API 24)**. Kedua APK versionCode 2 dan bertanda tangan sama — pasang salah satu.
+- Minimal **Android 7.0 (API 24)**. Kedua APK versionCode 3 dan bertanda tangan sama — pasang salah satu.
 - APK ditandatangani **release key** (`CN=UpahKu`), bukan debug key.
 - Versi lain: [semua rilis](https://github.com/rhsa-fr/UpahKU/releases).
-- `SHA256 arm64 21E50EE8575C1F3B6C88F18F17E9AC1FCD01D7F4216A0DB54983259401B757C9`
-- `SHA256 universal 592E4940944FCADF776B1EA288879C23B03D5286DAB1B4D88FB85C514DBA97AB`
+- `SHA256 arm64 FEBE4A433AB853BFC1CB3A6D3DBBDD229F0D5DFB80909A9F05345F03BC4719C9`
+- `SHA256 universal 6238859CE4402861831DA6D7D2E121B8022ADCE2102DFB6A793C4BFFCC2BCEDF`
 
 > [!IMPORTANT]
 > Sudah pernah memasang **v1.0.0**? Versi itu memakai debug key, jadi Android menolak update
 > (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`). Backup dulu lewat **Lainnya → Backup**, uninstall v1.0.0,
-> pasang v1.1.0, lalu restore backup.
+> pasang v1.1.1, lalu restore backup. Dari **v1.1.0** bisa update langsung tanpa uninstall.
 
 <p align="center">
   <strong>UpahKu — payroll harian, tanpa internet.</strong>
